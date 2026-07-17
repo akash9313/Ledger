@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   emptyText: { color: '#9CA3AF', textAlign: 'center', marginTop: 40 },
   fab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 80,
     right: 24,
     backgroundColor: '#3B82F6',
     width: 56,
