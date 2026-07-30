@@ -11,11 +11,14 @@ import { Note } from '../features/notes/models/Note';
 
 const COLLECTION_NAME = 'ledger_notes';
 
-export const syncNotesToCloud = async (localNotes: Note[]): Promise<{ success: boolean; notes?: Note[]; error?: string }> => {
+export const syncNotesToCloud = async (
+  localNotes: Note[],
+  deletedNotes: Note[] = []
+): Promise<{ success: boolean; notes?: Note[]; error?: string }> => {
   if (!isFirebaseConfigured()) {
     return { 
       success: false, 
-      error: 'Firebase is not configured. Please set your Firebase credentials in Settings.' 
+      error: 'Firebase is not configured.' 
     };
   }
 
@@ -39,12 +42,15 @@ export const syncNotesToCloud = async (localNotes: Note[]): Promise<{ success: b
     });
 
     const localNotesMap = new Map<string, Note>(localNotes.map(n => [n.id, n]));
+    const deletedIdsSet = new Set<string>(deletedNotes.map(n => n.id));
     const mergedNotesMap = new Map<string, Note>();
     const batch = writeBatch(db);
     let batchOperations = 0;
 
-    // 2. Merge local into remote (Last-Write-Wins based on updatedAt)
+    // 2. Merge active local notes into remote (Last-Write-Wins based on updatedAt)
     for (const localNote of localNotes) {
+      if (deletedIdsSet.has(localNote.id)) continue;
+      
       const remoteNote = remoteNotesMap.get(localNote.id);
       if (!remoteNote) {
         // Upload local note to cloud
@@ -68,9 +74,14 @@ export const syncNotesToCloud = async (localNotes: Note[]): Promise<{ success: b
       }
     }
 
-    // 3. Include remote notes that don't exist locally yet
+    // 3. Process remote notes (Include if new; Delete from cloud if locally deleted)
     remoteNotesMap.forEach((remoteNote, id) => {
-      if (!localNotesMap.has(id)) {
+      if (deletedIdsSet.has(id)) {
+        // Delete remote document because note was deleted locally
+        const docRef = doc(db, COLLECTION_NAME, id);
+        batch.delete(docRef);
+        batchOperations++;
+      } else if (!localNotesMap.has(id)) {
         mergedNotesMap.set(id, remoteNote);
       }
     });

@@ -194,19 +194,26 @@ const HomeScreen = () => {
         </View>
       )}
 
-      {/* Dropdown Menu Overlay */}
+      {/* Dropdown Backdrop & Menu Overlay */}
       {isMenuOpen && (
-        <View style={[styles.dropdownMenu, { backgroundColor: colors.dropdownBg, borderColor: colors.border }]}>
-          <TouchableOpacity style={styles.dropdownItem} onPress={handleCloudSync}>
-            <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>{isSyncing ? 'Syncing... 🔄' : 'Cloud Sync ☁️'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.dropdownItem} onPress={handleBackup}>
-            <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>Local Backup</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.dropdownItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Settings'); }}>
-            <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>Settings</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          <TouchableOpacity 
+            style={styles.menuBackdrop} 
+            activeOpacity={1} 
+            onPress={() => setIsMenuOpen(false)} 
+          />
+          <View style={[styles.dropdownMenu, { backgroundColor: colors.dropdownBg, borderColor: colors.border }]}>
+            <TouchableOpacity style={styles.dropdownItem} onPress={handleCloudSync}>
+              <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>{isSyncing ? 'Syncing... 🔄' : 'Cloud Sync ☁️'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dropdownItem} onPress={handleBackup}>
+              <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>Local Backup</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dropdownItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Settings'); }}>
+              <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>Settings</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
       <FlatList
@@ -282,6 +289,14 @@ const styles = StyleSheet.create({
   iconText: {
     fontSize: 22,
     fontWeight: 'bold',
+  },
+  menuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 90,
   },
   dropdownMenu: {
     position: 'absolute',

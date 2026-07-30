@@ -72,6 +72,7 @@ export const useNotesStore = create<NotesState>()(
         setTimeout(() => get().syncWithCloud(), 500);
       },
       deleteNote: (id) => {
+        deleteNoteFromCloud(id);
         set((state) => {
           const noteToDelete = state.notes.find((n) => n.id === id);
           if (!noteToDelete) return state;
@@ -90,7 +91,7 @@ export const useNotesStore = create<NotesState>()(
           if (!noteToRestore) return state;
           return {
             deletedNotes: state.deletedNotes.filter((n) => n.id !== id),
-            notes: [noteToRestore, ...state.notes]
+            notes: [{ ...noteToRestore, updatedAt: Date.now() }, ...state.notes]
           };
         });
         updateWidgetWithLatestNotes(get().notes, getThemeMode());
@@ -105,7 +106,8 @@ export const useNotesStore = create<NotesState>()(
       syncWithCloud: async () => {
         set({ isSyncing: true, syncError: null });
         const currentLocalNotes = get().notes;
-        const result = await syncNotesToCloud(currentLocalNotes);
+        const currentDeletedNotes = get().deletedNotes;
+        const result = await syncNotesToCloud(currentLocalNotes, currentDeletedNotes);
 
         if (result.success && result.notes) {
           set({
@@ -132,4 +134,3 @@ export const useNotesStore = create<NotesState>()(
     }
   )
 );
-
