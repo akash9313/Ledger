@@ -5,6 +5,7 @@ export interface ThemeColors {
   surface: string;
   surfaceSelected: string;
   card: string;
+  cardBorder: string;
   textPrimary: string;
   textSecondary: string;
   textMuted: string;
@@ -15,45 +16,56 @@ export interface ThemeColors {
   inputBg: string;
   modalBg: string;
   positive: string;
+  positiveBg: string;
   negative: string;
+  negativeBg: string;
+  badgeBg: string;
   statusBar: 'light-content' | 'dark-content';
 }
 
 export const darkColors: ThemeColors = {
-  background: '#121212',
-  surface: '#1E1E1E',
-  surfaceSelected: '#374151',
-  card: '#1E1E1E',
-  textPrimary: '#FFFFFF',
+  background: '#0B0E14',
+  surface: '#151923',
+  surfaceSelected: '#232A3B',
+  card: '#151923',
+  cardBorder: '#232A3B',
+  textPrimary: '#F9FAFB',
   textSecondary: '#E5E7EB',
   textMuted: '#9CA3AF',
-  border: '#374151',
-  icon: '#E5E7EB',
-  accent: '#3B82F6',
-  dropdownBg: '#2D2D2D',
-  inputBg: '#1E1E1E',
-  modalBg: '#2D2D2D',
-  positive: '#4ADE80',
+  border: '#232A3B',
+  icon: '#F9FAFB',
+  accent: '#6366F1',
+  dropdownBg: '#1E2330',
+  inputBg: '#151923',
+  modalBg: '#1E2330',
+  positive: '#34D399',
+  positiveBg: 'rgba(52, 211, 153, 0.15)',
   negative: '#F87171',
+  negativeBg: 'rgba(248, 113, 113, 0.15)',
+  badgeBg: '#1F2937',
   statusBar: 'light-content',
 };
 
 export const lightColors: ThemeColors = {
-  background: '#F3F4F6',
+  background: '#F8FAFC',
   surface: '#FFFFFF',
-  surfaceSelected: '#E5E7EB',
+  surfaceSelected: '#EEF2FF',
   card: '#FFFFFF',
-  textPrimary: '#111827',
-  textSecondary: '#374151',
-  textMuted: '#6B7280',
-  border: '#E5E7EB',
-  icon: '#111827',
-  accent: '#2563EB',
+  cardBorder: '#E2E8F0',
+  textPrimary: '#0F172A',
+  textSecondary: '#334155',
+  textMuted: '#64748B',
+  border: '#E2E8F0',
+  icon: '#0F172A',
+  accent: '#4F46E5',
   dropdownBg: '#FFFFFF',
-  inputBg: '#F9FAFB',
+  inputBg: '#F1F5F9',
   modalBg: '#FFFFFF',
-  positive: '#16A34A',
-  negative: '#DC2626',
+  positive: '#059669',
+  positiveBg: '#ECFDF5',
+  negative: '#D97706',
+  negativeBg: '#FEF2F2',
+  badgeBg: '#F1F5F9',
   statusBar: 'dark-content',
 };
 

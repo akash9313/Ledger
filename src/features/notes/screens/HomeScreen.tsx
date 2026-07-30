@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Share, Alert, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNotesStore } from '../store/useNotesStore';
@@ -16,6 +16,7 @@ const HomeScreen = () => {
   const { listOrder } = useSettingsStore();
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,13 +83,15 @@ const HomeScreen = () => {
   const renderItem = ({ item }: { item: any }) => {
     const total = calculateTotal(item.content);
     const isSelected = selectedIds.includes(item.id);
+    const snippet = item.content ? item.content.split('\n').filter((l: string) => l.trim().length > 0)[0] || '' : '';
 
     return (
       <TouchableOpacity 
+        activeOpacity={0.7}
         style={[
           styles.card, 
-          { backgroundColor: colors.card },
-          isSelected && { backgroundColor: colors.surfaceSelected, borderColor: colors.accent, borderWidth: 1 }
+          { backgroundColor: colors.card, borderColor: colors.cardBorder },
+          isSelected && { backgroundColor: colors.surfaceSelected, borderColor: colors.accent, borderWidth: 2 }
         ]}
         onPress={() => {
           if (isSelectionMode) {
@@ -108,14 +111,35 @@ const HomeScreen = () => {
            }
         }}
       >
-        <Text style={[styles.title, { color: colors.textPrimary }]}>{item.title || 'Untitled'}</Text>
-        {isSelectionMode ? (
-           <Text style={[styles.iconText, { color: colors.icon }]}>{isSelected ? '☑' : '☐'}</Text>
-        ) : (
-          <Text style={[styles.total, total < 0 ? { color: colors.negative } : { color: colors.positive }]}>
-            Total: {total}
+        <View style={styles.cardHeader}>
+          <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+            {item.title || 'Untitled'}
           </Text>
-        )}
+          {isSelectionMode ? (
+             <Text style={[styles.iconText, { color: colors.accent }]}>{isSelected ? '☑' : '☐'}</Text>
+          ) : (
+            <View style={[
+              styles.totalBadge, 
+              { backgroundColor: total < 0 ? colors.negativeBg : colors.positiveBg }
+            ]}>
+              <Text style={[styles.totalText, total < 0 ? { color: colors.negative } : { color: colors.positive }]}>
+                {total > 0 ? `+${total}` : `${total}`}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {snippet ? (
+          <Text style={[styles.snippet, { color: colors.textMuted }]} numberOfLines={2}>
+            {snippet}
+          </Text>
+        ) : null}
+
+        <View style={styles.cardFooter}>
+          <Text style={[styles.dateText, { color: colors.textMuted }]}>
+            {new Date(item.updatedAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -130,8 +154,8 @@ const HomeScreen = () => {
              <Text style={[styles.iconText, { color: colors.icon }]}>❮</Text>
           </TouchableOpacity>
           <TextInput 
-             style={[styles.searchInput, { color: colors.textPrimary }]} 
-             placeholder="Search..." 
+             style={[styles.searchInput, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: colors.border }]} 
+             placeholder="Search notes..." 
              placeholderTextColor={colors.textMuted}
              value={searchQuery}
              onChangeText={setSearchQuery}
@@ -145,12 +169,15 @@ const HomeScreen = () => {
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{selectedIds.length} Selected</Text>
           <TouchableOpacity onPress={handleBulkDelete} style={styles.iconBtn}>
-             <Text style={[styles.iconText, { color: colors.icon }]}>🗑</Text>
+             <Text style={[styles.iconText, { color: '#F87171' }]}>🗑</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Ledger</Text>
+          <View>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Ledger</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>{notes.length} {notes.length === 1 ? 'note' : 'notes'}</Text>
+          </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconBtn} onPress={() => setIsSelectionMode(true)}>
               <Text style={[styles.iconText, { color: colors.icon }]}>☑</Text>
@@ -167,7 +194,7 @@ const HomeScreen = () => {
 
       {/* Dropdown Menu Overlay */}
       {isMenuOpen && (
-        <View style={[styles.dropdownMenu, { backgroundColor: colors.dropdownBg }]}>
+        <View style={[styles.dropdownMenu, { backgroundColor: colors.dropdownBg, borderColor: colors.border }]}>
           <TouchableOpacity style={styles.dropdownItem} onPress={handleCloudSync}>
             <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>{isSyncing ? 'Syncing... 🔄' : 'Cloud Sync ☁️'}</Text>
           </TouchableOpacity>
@@ -185,11 +212,25 @@ const HomeScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textMuted }]}>No notes yet. Tap + to create one.</Text>}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>📝</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No notes yet</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>Tap the + button below to add your first ledger note!</Text>
+          </View>
+        }
       />
       
       <TouchableOpacity 
-        style={[styles.fab, { backgroundColor: colors.accent }]}
+        activeOpacity={0.85}
+        style={[
+          styles.fab, 
+          { 
+            backgroundColor: colors.accent,
+            bottom: Math.max(insets.bottom + 48, 80),
+            shadowColor: colors.accent,
+          }
+        ]}
         onPress={() => navigation.navigate('NoteDetail', { noteId: undefined })}
       >
         <Text style={styles.fabText}>+</Text>
@@ -199,100 +240,161 @@ const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212' },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 16,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 42,
-    fontWeight: '400',
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 2,
   },
   searchInput: {
     flex: 1,
-    color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 18,
     paddingHorizontal: 16,
-    marginLeft: 8,
+    paddingVertical: 10,
+    marginLeft: 12,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   headerIcons: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     alignItems: 'center',
-    paddingBottom: 4,
   },
   iconBtn: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 10,
   },
   iconText: {
-    color: '#E5E7EB',
-    fontSize: 26,
+    fontSize: 22,
+    fontWeight: 'bold',
   },
   dropdownMenu: {
     position: 'absolute',
-    top: 70,
-    right: 16,
-    backgroundColor: '#2D2D2D',
-    borderRadius: 12,
-    paddingVertical: 8,
-    minWidth: 160,
+    top: 75,
+    right: 20,
+    borderRadius: 16,
+    paddingVertical: 6,
+    minWidth: 170,
     zIndex: 100,
-    elevation: 10,
+    elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    borderWidth: 1,
   },
   dropdownItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
   dropdownText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
+    fontWeight: '600',
   },
-  listContent: { padding: 16 },
+  listContent: { padding: 16, paddingBottom: 160 },
   card: {
-    backgroundColor: '#1E1E1E',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: 18,
+    borderRadius: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 6,
   },
-  cardSelected: {
-    backgroundColor: '#374151',
-    borderColor: '#60A5FA',
-    borderWidth: 1,
+  title: {
+    fontSize: 19,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 12,
   },
-  title: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
-  total: { fontSize: 16, fontWeight: 'bold' },
-  positive: { color: '#4ADE80' },
-  negative: { color: '#F87171' },
-  emptyText: { color: '#9CA3AF', textAlign: 'center', marginTop: 40 },
+  snippet: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginTop: 4,
+  },
+  dateText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  totalBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  totalText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    lineHeight: 22,
+  },
   fab: {
     position: 'absolute',
-    bottom: 80,
     right: 24,
-    backgroundColor: '#3B82F6',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    elevation: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.65,
+    shadowRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
-  fabText: { color: '#FFFFFF', fontSize: 32, lineHeight: 34 },
+  fabText: { 
+    color: '#FFFFFF', 
+    fontSize: 38, 
+    lineHeight: 40, 
+    fontWeight: '300',
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
 });
 
 export default HomeScreen;

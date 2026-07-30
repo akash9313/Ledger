@@ -23,16 +23,37 @@ const RecentlyDeletedScreen = () => {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={[styles.card, { backgroundColor: colors.card }]} onPress={() => handleNotePress(item.id)}>
-      <Text style={[styles.title, { color: colors.textPrimary }]}>{item.title || 'Untitled'}</Text>
-    </TouchableOpacity>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.cardInfo}>
+        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+          {item.title || 'Untitled'}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>Tap action to restore or delete</Text>
+      </View>
+      <View style={styles.actionRow}>
+        <TouchableOpacity 
+          style={[styles.actionChip, { backgroundColor: colors.positiveBg }]} 
+          onPress={() => restoreNote(item.id)}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.actionChipText, { color: colors.positive }]}>Restore ↺</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.actionChip, { backgroundColor: colors.negativeBg }]} 
+          onPress={() => permanentlyDeleteNote(item.id)}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.actionChipText, { color: colors.negative }]}>Delete 🗑</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn} activeOpacity={0.7}>
           <Text style={[styles.iconText, { color: colors.icon }]}>❮</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Recently Deleted</Text>
@@ -43,42 +64,87 @@ const RecentlyDeletedScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textMuted }]}>No recently deleted notes.</Text>}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>🗑</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No deleted notes</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>Notes you delete will stay here until permanently removed.</Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   headerTitle: {
-    color: '#FFFFFF',
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   iconBtn: {
     padding: 8,
   },
   iconText: {
-    color: '#FFFFFF',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
   },
   listContent: { padding: 16 },
   card: {
-    backgroundColor: '#1E1E1E',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardInfo: {
     marginBottom: 12,
   },
-  title: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
-  emptyText: { color: '#9CA3AF', textAlign: 'center', marginTop: 40 },
+  title: { fontSize: 18, fontWeight: '700' },
+  subtitle: { fontSize: 13, marginTop: 2 },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  actionChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
 });
 
 export default RecentlyDeletedScreen;
