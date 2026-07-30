@@ -38,7 +38,17 @@ export const useSettingsStore = create<SettingsState>()(
       theme: 'dark',
       setListDisplay: (display) => set({ listDisplay: display }),
       setListOrder: (order) => set({ listOrder: order }),
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => {
+        set({ theme });
+        try {
+          const { useNotesStore } = require('../../notes/store/useNotesStore');
+          const notes = useNotesStore.getState().notes || [];
+          const { updateWidgetWithLatestNotes } = require('../../../services/widgetService');
+          updateWidgetWithLatestNotes(notes, theme);
+        } catch (e) {
+          // fallback
+        }
+      },
     }),
     {
       name: 'settings-storage',

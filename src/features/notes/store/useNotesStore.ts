@@ -3,6 +3,8 @@ import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { createMMKV } from 'react-native-mmkv';
 import { Note } from '../models/Note';
 import { syncNotesToCloud, deleteNoteFromCloud } from '../../../services/cloudSyncService';
+import { updateWidgetWithLatestNotes } from '../../../services/widgetService';
+import { useSettingsStore } from '../../settings/store/useSettingsStore';
 
 const storage = createMMKV();
 
@@ -18,6 +20,8 @@ const zustandStorage: StateStorage = {
     return storage.remove(name);
   },
 };
+
+const getThemeMode = () => useSettingsStore.getState().theme || 'dark';
 
 interface NotesState {
   notes: Note[];
@@ -55,6 +59,7 @@ export const useNotesStore = create<NotesState>()(
             ...state.notes,
           ]
         }));
+        updateWidgetWithLatestNotes(get().notes, getThemeMode());
         // Auto-sync new note to Cloud Firestore in background
         setTimeout(() => get().syncWithCloud(), 300);
       },
@@ -62,6 +67,7 @@ export const useNotesStore = create<NotesState>()(
         set((state) => ({
           notes: state.notes.map((n) => n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n)
         }));
+        updateWidgetWithLatestNotes(get().notes, getThemeMode());
         // Auto-sync updated note to Cloud Firestore in background
         setTimeout(() => get().syncWithCloud(), 500);
       },
@@ -74,6 +80,7 @@ export const useNotesStore = create<NotesState>()(
             deletedNotes: [noteToDelete, ...state.deletedNotes]
           };
         });
+        updateWidgetWithLatestNotes(get().notes, getThemeMode());
         // Auto-sync after deleting note
         setTimeout(() => get().syncWithCloud(), 300);
       },
@@ -86,6 +93,7 @@ export const useNotesStore = create<NotesState>()(
             notes: [noteToRestore, ...state.notes]
           };
         });
+        updateWidgetWithLatestNotes(get().notes, getThemeMode());
         setTimeout(() => get().syncWithCloud(), 300);
       },
       permanentlyDeleteNote: (id) => {
@@ -106,12 +114,14 @@ export const useNotesStore = create<NotesState>()(
             lastSyncedAt: Date.now(),
             syncError: null,
           });
+          updateWidgetWithLatestNotes(result.notes, getThemeMode());
           return { success: true };
         } else {
           set({
             isSyncing: false,
             syncError: result.error || 'Sync failed',
           });
+          updateWidgetWithLatestNotes(currentLocalNotes, getThemeMode());
           return { success: false, error: result.error };
         }
       },
