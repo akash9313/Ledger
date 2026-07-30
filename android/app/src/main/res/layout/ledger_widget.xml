@@ -4,13 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#151923"
+    android:background="@drawable/widget_background_dark"
     android:padding="14dp">
 
     <!-- Header Row -->
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:layout_marginBottom="10dp">
 
         <TextView
@@ -24,134 +26,227 @@
 
         <TextView
             android:id="@+id/widget_subtitle"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_toEndOf="@id/widget_title"
-            android:layout_alignBaseline="@id/widget_title"
-            android:layout_marginStart="8dp"
-            android:text="• Recent Notes"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="• Recent"
             android:textColor="#9CA3AF"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
-        <ImageView
+        <TextView
+            android:id="@+id/widget_add_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="➕ Add"
+            android:textColor="#38BDF8"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:layout_marginEnd="4dp" />
+
+        <TextView
             android:id="@+id/widget_refresh_btn"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:src="@android:drawable/ic_popup_sync"
-            android:tint="#9CA3AF" />
-    </RelativeLayout>
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔄"
+            android:textSize="14sp"
+            android:padding="4dp" />
+    </LinearLayout>
 
-    <!-- Note 1 -->
+    <!-- Empty State View -->
     <LinearLayout
-        android:id="@+id/note1_container"
+        android:id="@+id/widget_empty_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingVertical="6dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
 
         <TextView
-            android:id="@+id/note1_title"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:text="📝"
+            android:textSize="26sp" />
+
+        <TextView
+            android:id="@+id/widget_empty_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="No notes available"
-            android:textColor="#E5E7EB"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
-
-        <TextView
-            android:id="@+id/note1_total"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="#34D399"
+            android:textColor="#9CA3AF"
             android:textSize="13sp"
             android:textStyle="bold"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp" />
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/widget_empty_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tap ➕ Add to create a note"
+            android:textColor="#6B7280"
+            android:textSize="11sp"
+            android:layout_marginTop="2dp" />
     </LinearLayout>
 
+    <!-- Notes List Container -->
+    <LinearLayout
+        android:id="@+id/widget_notes_list_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- Note 1 -->
+        <LinearLayout
+            android:id="@+id/note1_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="6dp">
+
+            <TextView
+                android:id="@+id/note1_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Sample Note"
+                android:textColor="#E5E7EB"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/note1_total"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+0"
+                android:textColor="#34D399"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:background="@drawable/widget_badge_green"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/sep1"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#232A3B" />
+
+        <!-- Note 2 -->
+        <LinearLayout
+            android:id="@+id/note2_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="6dp">
+
+            <TextView
+                android:id="@+id/note2_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text=""
+                android:textColor="#E5E7EB"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/note2_total"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="#34D399"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:background="@drawable/widget_badge_green"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/sep2"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#232A3B" />
+
+        <!-- Note 3 -->
+        <LinearLayout
+            android:id="@+id/note3_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="6dp">
+
+            <TextView
+                android:id="@+id/note3_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text=""
+                android:textColor="#E5E7EB"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/note3_total"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="#34D399"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:background="@drawable/widget_badge_green"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Footer Row -->
     <View
-        android:id="@+id/sep1"
+        android:id="@+id/sep_footer"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#232A3B" />
+        android:background="#232A3B"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="6dp" />
 
-    <!-- Note 2 -->
     <LinearLayout
-        android:id="@+id/note2_container"
+        android:id="@+id/widget_footer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingVertical="6dp">
+        android:gravity="center_vertical">
 
         <TextView
-            android:id="@+id/note2_title"
+            android:id="@+id/widget_footer_label"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text=""
-            android:textColor="#E5E7EB"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:text="Net Balance"
+            android:textColor="#9CA3AF"
+            android:textSize="12sp" />
 
         <TextView
-            android:id="@+id/note2_total"
+            android:id="@+id/widget_footer_total"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
+            android:text="₹0"
             android:textColor="#34D399"
             android:textSize="13sp"
-            android:textStyle="bold"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp" />
-    </LinearLayout>
-
-    <View
-        android:id="@+id/sep2"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#232A3B" />
-
-    <!-- Note 3 -->
-    <LinearLayout
-        android:id="@+id/note3_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingVertical="6dp">
-
-        <TextView
-            android:id="@+id/note3_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text=""
-            android:textColor="#E5E7EB"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
-
-        <TextView
-            android:id="@+id/note3_total"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="#34D399"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp" />
+            android:textStyle="bold" />
     </LinearLayout>
 
 </LinearLayout>

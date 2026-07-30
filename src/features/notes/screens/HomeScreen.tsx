@@ -29,13 +29,16 @@ const HomeScreen = () => {
   // Auto-restore / sync notes from Cloud Firestore on app startup
   useEffect(() => {
     syncWithCloud();
+  }, []);
+
+  useEffect(() => {
     try {
       const { updateWidgetWithLatestNotes } = require('../../../services/widgetService');
       updateWidgetWithLatestNotes(notes, colors.statusBar === 'dark-content' ? 'light' : 'dark');
     } catch (e) {
       // fallback
     }
-  }, []);
+  }, [notes, colors.statusBar]);
 
   const handleBulkDelete = () => {
     selectedIds.forEach(id => deleteNote(id));
@@ -178,7 +181,6 @@ const HomeScreen = () => {
         <View style={styles.header}>
           <View>
             <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Ledger</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>{notes.length} {notes.length === 1 ? 'note' : 'notes'}</Text>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconBtn} onPress={() => setIsSelectionMode(true)}>

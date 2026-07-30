@@ -8,9 +8,8 @@ export const updateWidgetWithLatestNotes = (notes: any[], themeMode: string = 'd
   }
 
   try {
-    const latestThreeNotes = notes
+    const formattedNotes = (notes || [])
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-      .slice(0, 3)
       .map(note => ({
         id: note.id,
         title: note.title || 'Untitled',
@@ -18,7 +17,7 @@ export const updateWidgetWithLatestNotes = (notes: any[], themeMode: string = 'd
         updatedAt: note.updatedAt || Date.now(),
       }));
 
-    const jsonString = JSON.stringify(latestThreeNotes);
+    const jsonString = JSON.stringify(formattedNotes);
     LedgerWidget.updateWidget(jsonString, themeMode);
   } catch (error) {
     console.error('Failed to update Android widget:', error);
