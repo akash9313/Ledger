@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions, StatusBar } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../core/navigation/RootNavigator';
+import { useTheme } from '../../../theme/useTheme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 const SplashScreen = ({ navigation }: Props) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const { colors } = useTheme();
 
   useEffect(() => {
     Animated.parallel([
@@ -35,6 +37,7 @@ const SplashScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#0B0B12" translucent={true} />
       <Animated.Image 
         source={require('../../../assets/Ledger_starting_animation.png')}
         style={[
@@ -50,18 +53,16 @@ const SplashScreen = ({ navigation }: Props) => {
   );
 };
 
-const { width, height } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#0B0B12',
     alignItems: 'center',
     justifyContent: 'center',
   },
   image: {
-    width: width * 0.8,
-    height: height * 0.8,
+    width: '92%',
+    height: '92%',
   }
 });
 

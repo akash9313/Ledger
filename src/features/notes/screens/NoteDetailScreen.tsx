@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../core/navigation/RootNavigator';
 import { useNotesStore } from '../store/useNotesStore';
 import { calculateTotal } from '../utils/calculator';
+import { useTheme } from '../../../theme/useTheme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NoteDetail'>;
 
 const NoteDetailScreen = ({ route, navigation }: Props) => {
   const { noteId } = route.params;
   const { notes, addNote, updateNote, deleteNote } = useNotesStore();
+  const { colors } = useTheme();
   
   const existingNote = notes.find(n => n.id === noteId);
 
@@ -67,36 +69,37 @@ const NoteDetailScreen = ({ route, navigation }: Props) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Text style={styles.iconText}>❮</Text>
+          <Text style={[styles.iconText, { color: colors.icon }]}>❮</Text>
         </TouchableOpacity>
         
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleUndo} style={styles.iconBtn} disabled={historyIndex === 0}>
-            <Text style={[styles.iconText, historyIndex === 0 && styles.disabledIcon]}>↺</Text>
+            <Text style={[styles.iconText, { color: historyIndex === 0 ? colors.textMuted : colors.icon }]}>↺</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleRedo} style={styles.iconBtn} disabled={historyIndex === history.length - 1}>
-            <Text style={[styles.iconText, historyIndex === history.length - 1 && styles.disabledIcon]}>↻</Text>
+            <Text style={[styles.iconText, { color: historyIndex === history.length - 1 ? colors.textMuted : colors.icon }]}>↻</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleSave} style={styles.iconBtn}>
-            <Text style={styles.iconText}>✓</Text>
+            <Text style={[styles.iconText, { color: colors.icon }]}>✓</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <TextInput
-        style={styles.titleInput}
+        style={[styles.titleInput, { color: colors.textPrimary, borderBottomColor: colors.border }]}
         placeholder="Enter Name..."
-        placeholderTextColor="#6B7280"
+        placeholderTextColor={colors.textMuted}
         value={title}
         onChangeText={setTitle}
       />
 
-      <View style={styles.totalContainer}>
-        <Text style={styles.totalLabel}>Total:</Text>
-        <Text style={[styles.totalAmount, total < 0 ? styles.negative : styles.positive]}>
+      <View style={[styles.totalContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.totalLabel, { color: colors.textMuted }]}>Total:</Text>
+        <Text style={[styles.totalAmount, total < 0 ? { color: colors.negative } : { color: colors.positive }]}>
           {total}
         </Text>
       </View>
@@ -107,9 +110,9 @@ const NoteDetailScreen = ({ route, navigation }: Props) => {
         keyboardShouldPersistTaps="handled"
       >
         <TextInput
-          style={styles.contentInput}
+          style={[styles.contentInput, { color: colors.textSecondary }]}
           placeholder="Type numbers here...&#10;e.g. 50&#10;-30&#10;Cleared"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={colors.textMuted}
           value={content}
           onChangeText={setContent}
           multiline

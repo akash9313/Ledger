@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Share, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Share, Alert, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,13 +7,15 @@ import { useNotesStore } from '../store/useNotesStore';
 import { useSettingsStore } from '../../settings/store/useSettingsStore';
 import { calculateTotal } from '../utils/calculator';
 import { RootStackParamList } from '../../../core/navigation/RootNavigator';
+import { useTheme } from '../../../theme/useTheme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen = () => {
-  const { notes, deleteNote } = useNotesStore();
+  const { notes, deleteNote, syncWithCloud, isSyncing, syncError, lastSyncedAt } = useNotesStore();
   const { listOrder } = useSettingsStore();
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTheme();
 
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,10 +25,32 @@ const HomeScreen = () => {
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Auto-restore / sync notes from Cloud Firestore on app startup
+  useEffect(() => {
+    syncWithCloud();
+  }, []);
+
   const handleBulkDelete = () => {
     selectedIds.forEach(id => deleteNote(id));
     setSelectedIds([]);
     setIsSelectionMode(false);
+  };
+
+  const handleCloudSync = async () => {
+    setIsMenuOpen(false);
+    const res = await syncWithCloud();
+    if (res.success) {
+      Alert.alert('Cloud Sync Success ☁️', 'Your notes have been synchronized with Firebase Firestore.');
+    } else {
+      Alert.alert(
+        'Cloud Sync Required',
+        `${res.error || 'Failed to sync.'}\n\nWould you like to configure your Firebase credentials in Settings?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go to Settings', onPress: () => navigation.navigate('Settings') },
+        ]
+      );
+    }
   };
 
   const handleBackup = async () => {
@@ -61,7 +85,11 @@ const HomeScreen = () => {
 
     return (
       <TouchableOpacity 
-        style={[styles.card, isSelected && styles.cardSelected]}
+        style={[
+          styles.card, 
+          { backgroundColor: colors.card },
+          isSelected && { backgroundColor: colors.surfaceSelected, borderColor: colors.accent, borderWidth: 1 }
+        ]}
         onPress={() => {
           if (isSelectionMode) {
             if (isSelected) {
@@ -80,11 +108,11 @@ const HomeScreen = () => {
            }
         }}
       >
-        <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{item.title || 'Untitled'}</Text>
         {isSelectionMode ? (
-           <Text style={styles.iconText}>{isSelected ? '☑' : '☐'}</Text>
+           <Text style={[styles.iconText, { color: colors.icon }]}>{isSelected ? '☑' : '☐'}</Text>
         ) : (
-          <Text style={[styles.total, total < 0 ? styles.negative : styles.positive]}>
+          <Text style={[styles.total, total < 0 ? { color: colors.negative } : { color: colors.positive }]}>
             Total: {total}
           </Text>
         )}
@@ -93,17 +121,18 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
       {/* Dynamic Header */}
       {isSearchMode ? (
         <View style={styles.header}>
           <TouchableOpacity onPress={() => { setIsSearchMode(false); setSearchQuery(''); }} style={styles.iconBtn}>
-             <Text style={styles.iconText}>❮</Text>
+             <Text style={[styles.iconText, { color: colors.icon }]}>❮</Text>
           </TouchableOpacity>
           <TextInput 
-             style={styles.searchInput} 
+             style={[styles.searchInput, { color: colors.textPrimary }]} 
              placeholder="Search..." 
-             placeholderTextColor="#9CA3AF"
+             placeholderTextColor={colors.textMuted}
              value={searchQuery}
              onChangeText={setSearchQuery}
              autoFocus
@@ -112,25 +141,25 @@ const HomeScreen = () => {
       ) : isSelectionMode ? (
         <View style={styles.header}>
           <TouchableOpacity onPress={() => { setIsSelectionMode(false); setSelectedIds([]); }} style={styles.iconBtn}>
-             <Text style={styles.iconText}>❮</Text>
+             <Text style={[styles.iconText, { color: colors.icon }]}>❮</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{selectedIds.length} Selected</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{selectedIds.length} Selected</Text>
           <TouchableOpacity onPress={handleBulkDelete} style={styles.iconBtn}>
-             <Text style={styles.iconText}>🗑</Text>
+             <Text style={[styles.iconText, { color: colors.icon }]}>🗑</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Ledger</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Ledger</Text>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconBtn} onPress={() => setIsSelectionMode(true)}>
-              <Text style={styles.iconText}>☑</Text>
+              <Text style={[styles.iconText, { color: colors.icon }]}>☑</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} onPress={() => setIsSearchMode(true)}>
-              <Text style={styles.iconText}>⌕</Text>
+              <Text style={[styles.iconText, { color: colors.icon }]}>⌕</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} onPress={() => setIsMenuOpen(!isMenuOpen)}>
-              <Text style={styles.iconText}>⋮</Text>
+              <Text style={[styles.iconText, { color: colors.icon }]}>⋮</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -138,12 +167,15 @@ const HomeScreen = () => {
 
       {/* Dropdown Menu Overlay */}
       {isMenuOpen && (
-        <View style={styles.dropdownMenu}>
+        <View style={[styles.dropdownMenu, { backgroundColor: colors.dropdownBg }]}>
+          <TouchableOpacity style={styles.dropdownItem} onPress={handleCloudSync}>
+            <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>{isSyncing ? 'Syncing... 🔄' : 'Cloud Sync ☁️'}</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.dropdownItem} onPress={handleBackup}>
-            <Text style={styles.dropdownText}>Backup</Text>
+            <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>Local Backup</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.dropdownItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Settings'); }}>
-            <Text style={styles.dropdownText}>Settings</Text>
+            <Text style={[styles.dropdownText, { color: colors.textPrimary }]}>Settings</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -153,11 +185,11 @@ const HomeScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<Text style={styles.emptyText}>No notes yet. Tap + to create one.</Text>}
+        ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textMuted }]}>No notes yet. Tap + to create one.</Text>}
       />
       
       <TouchableOpacity 
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: colors.accent }]}
         onPress={() => navigation.navigate('NoteDetail', { noteId: undefined })}
       >
         <Text style={styles.fabText}>+</Text>

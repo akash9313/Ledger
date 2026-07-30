@@ -1,12 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useNotesStore } from '../store/useNotesStore';
+import { useTheme } from '../../../theme/useTheme';
 
 const RecentlyDeletedScreen = () => {
   const { deletedNotes, restoreNote, permanentlyDeleteNote } = useNotesStore();
   const navigation = useNavigation();
+  const { colors } = useTheme();
 
   const handleNotePress = (id: string) => {
     Alert.alert(
@@ -21,18 +23,19 @@ const RecentlyDeletedScreen = () => {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleNotePress(item.id)}>
-      <Text style={styles.title}>{item.title || 'Untitled'}</Text>
+    <TouchableOpacity style={[styles.card, { backgroundColor: colors.card }]} onPress={() => handleNotePress(item.id)}>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{item.title || 'Untitled'}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Text style={styles.iconText}>❮</Text>
+          <Text style={[styles.iconText, { color: colors.icon }]}>❮</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Recently Deleted</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Recently Deleted</Text>
         <View style={{ width: 40 }} />
       </View>
       <FlatList
@@ -40,7 +43,7 @@ const RecentlyDeletedScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<Text style={styles.emptyText}>No recently deleted notes.</Text>}
+        ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textMuted }]}>No recently deleted notes.</Text>}
       />
     </SafeAreaView>
   );
