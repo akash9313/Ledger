@@ -2,8 +2,6 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { createMMKV } from 'react-native-mmkv';
 
-declare const process: any;
-
 const storage = createMMKV();
 const FIREBASE_CONFIG_KEY = 'ledger_firebase_config';
 
@@ -16,34 +14,27 @@ export interface FirebaseConfig {
   appId: string;
 }
 
-// Fallback config read securely from stored app config
-export const getStoredFirebaseConfig = (): FirebaseConfig | null => {
+export const DEFAULT_FIREBASE_CONFIG: FirebaseConfig = {
+  apiKey: 'AIzaSyDLJ5-4vvx4P0LlcD7AFGDPz3WHMfun6vk',
+  projectId: 'ledger-e0658',
+  appId: '1:805649213978:android:90c0271cc127e025f27fa3',
+  storageBucket: 'ledger-e0658.firebasestorage.app',
+};
+
+// Retrieve stored or pre-configured Firebase project settings
+export const getStoredFirebaseConfig = (): FirebaseConfig => {
   const saved = storage.getString(FIREBASE_CONFIG_KEY);
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.apiKey && parsed.projectId) {
+        return parsed;
+      }
     } catch (e) {
-      // ignore
+      // fallback
     }
   }
-
-  // Read environment variables if available
-  const env = typeof process !== 'undefined' && process.env ? process.env : {};
-  const apiKey = env.FIREBASE_API_KEY || '';
-  const projectId = env.FIREBASE_PROJECT_ID || '';
-  const appId = env.FIREBASE_APP_ID || '';
-  const storageBucket = env.FIREBASE_STORAGE_BUCKET || '';
-
-  if (apiKey && projectId) {
-    return {
-      apiKey,
-      projectId,
-      appId,
-      storageBucket,
-    };
-  }
-
-  return null;
+  return DEFAULT_FIREBASE_CONFIG;
 };
 
 export const saveFirebaseConfig = (config: FirebaseConfig) => {

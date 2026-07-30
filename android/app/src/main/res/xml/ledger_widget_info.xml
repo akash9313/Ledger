@@ -7,6 +7,8 @@
     android:updatePeriodMillis="1800000"
     android:description="@string/app_name"
     android:initialLayout="@layout/ledger_widget"
+    android:previewLayout="@layout/ledger_widget"
+    android:initialKeyguardLayout="@layout/ledger_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen">
 </appwidget-provider>

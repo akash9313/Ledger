@@ -29,6 +29,12 @@ const HomeScreen = () => {
   // Auto-restore / sync notes from Cloud Firestore on app startup
   useEffect(() => {
     syncWithCloud();
+    try {
+      const { updateWidgetWithLatestNotes } = require('../../../services/widgetService');
+      updateWidgetWithLatestNotes(notes, colors.statusBar === 'dark-content' ? 'light' : 'dark');
+    } catch (e) {
+      // fallback
+    }
   }, []);
 
   const handleBulkDelete = () => {
@@ -41,15 +47,11 @@ const HomeScreen = () => {
     setIsMenuOpen(false);
     const res = await syncWithCloud();
     if (res.success) {
-      Alert.alert('Cloud Sync Success ☁️', 'Your notes have been synchronized with Firebase Firestore.');
+      Alert.alert('Cloud Sync Complete ☁️', 'Your notes are synchronized with Firebase Firestore.');
     } else {
       Alert.alert(
-        'Cloud Sync Required',
-        `${res.error || 'Failed to sync.'}\n\nWould you like to configure your Firebase credentials in Settings?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Go to Settings', onPress: () => navigation.navigate('Settings') },
-        ]
+        'Cloud Sync Status',
+        res.error ? `Sync notice: ${res.error}` : 'Unable to connect to Cloud Sync. Please check your internet connection.',
       );
     }
   };

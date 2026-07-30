@@ -88,7 +88,6 @@ class LedgerWidgetProvider : AppWidgetProvider() {
             views.setInt(R.id.widget_container, "setBackgroundColor", bgColor)
             views.setTextColor(R.id.widget_title, titleColor)
             views.setTextColor(R.id.widget_subtitle, subtitleColor)
-            views.setInt(R.id.widget_refresh_btn, "setColorFilter", subtitleColor)
             views.setInt(R.id.sep1, "setBackgroundColor", sepColor)
             views.setInt(R.id.sep2, "setBackgroundColor", sepColor)
 
