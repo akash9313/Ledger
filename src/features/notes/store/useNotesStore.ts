@@ -131,6 +131,11 @@ export const useNotesStore = create<NotesState>()(
     {
       name: 'notes-storage',
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.notes) {
+          updateWidgetWithLatestNotes(state.notes, getThemeMode());
+        }
+      },
     }
   )
 );

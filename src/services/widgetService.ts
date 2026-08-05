@@ -1,4 +1,5 @@
 import { NativeModules, Platform } from 'react-native';
+import { calculateTotal } from '../features/notes/utils/calculator';
 
 const { LedgerWidget } = NativeModules;
 
@@ -14,6 +15,7 @@ export const updateWidgetWithLatestNotes = (notes: any[], themeMode: string = 'd
         id: note.id,
         title: note.title || 'Untitled',
         content: note.content || '',
+        total: calculateTotal(note.content || ''),
         updatedAt: note.updatedAt || Date.now(),
       }));
 
@@ -23,3 +25,4 @@ export const updateWidgetWithLatestNotes = (notes: any[], themeMode: string = 'd
     console.error('Failed to update Android widget:', error);
   }
 };
+

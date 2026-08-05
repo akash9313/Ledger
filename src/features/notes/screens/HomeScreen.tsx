@@ -226,8 +226,8 @@ const HomeScreen = () => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📝</Text>
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No notes yet</Text>
-            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>Tap the + button below to add your first ledger note!</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No accounts yet</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>Tap the + button below to add your first ledger account!</Text>
           </View>
         }
       />

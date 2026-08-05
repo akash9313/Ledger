@@ -22,6 +22,7 @@ class LedgerWidgetModule(reactContext: ReactApplicationContext) :
         prefs.edit()
             .putString(LedgerWidgetProvider.KEY_NOTES_DATA, notesJson)
             .putString(LedgerWidgetProvider.KEY_THEME_MODE, themeMode)
+            .putLong(LedgerWidgetProvider.KEY_LAST_UPDATED, System.currentTimeMillis())
             .apply()
 
         // Trigger AppWidget update
@@ -30,6 +31,7 @@ class LedgerWidgetModule(reactContext: ReactApplicationContext) :
         }
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, LedgerWidgetProvider::class.java))
+        appWidgetManager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list_view)
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
         context.sendBroadcast(intent)
     }
