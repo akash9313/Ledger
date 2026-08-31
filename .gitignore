@@ -77,10 +77,20 @@ yarn-error.log
 # Environment variables & Sensitive API Keys
 .env
 .env.*
+.env.local
+.env.production
 !.env.example
 
-# Android Firebase Credentials & Certificates
+# Android Firebase Credentials & Certificates & Keystores
 google-services.json
 **/google-services.json
 *google_services.json
 *credentials*.json
+*.keystore
+*.jks
+*.pepk
+*.p12
+*.key
+*.pem
+!debug.keystore
+

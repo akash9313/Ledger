@@ -2,6 +2,7 @@ import {
   doc, 
   setDoc, 
   getDoc, 
+  getDocs,
   collection, 
   deleteDoc, 
   onSnapshot 
@@ -127,4 +128,25 @@ export const subscribeToUserNotes = (
   }, (error) => {
     console.error('Firestore subscription error:', error);
   });
+};
+
+/**
+ * Fetch all notes for a user from Firestore once (One-time fetch on login/restore)
+ */
+export const fetchUserNotesFromFirestore = async (userId: string): Promise<Note[]> => {
+  const db = getDb();
+  if (!db || !userId) return [];
+
+  try {
+    const notesRef = collection(db, 'users', userId, 'ledger_chats');
+    const snapshot = await getDocs(notesRef);
+    const notes: Note[] = [];
+    snapshot.forEach((docSnap) => {
+      notes.push(docSnap.data() as Note);
+    });
+    return notes;
+  } catch (error) {
+    console.error('Error fetching user notes from Firestore:', error);
+    return [];
+  }
 };

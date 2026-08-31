@@ -7,7 +7,8 @@ import {
   saveNoteToFirestore, 
   deleteNoteFromFirestore, 
   syncAllNotesToFirestore,
-  subscribeToUserNotes
+  subscribeToUserNotes,
+  fetchUserNotesFromFirestore
 } from '../../../services/firestoreService';
 import { useAuthStore } from '../../auth/store/useAuthStore';
 
@@ -24,8 +25,8 @@ interface NotesState {
   lastSyncedAt: number | null;
   isSyncing: boolean;
 
-  addNote: (note: { title: string; phoneNumber?: string; content: string }) => Promise<void>;
-  updateNote: (id: string, updates: { title?: string; phoneNumber?: string; content?: string }) => Promise<void>;
+  addNote: (note: { title: string; phoneNumber?: string; upiId?: string; content: string }) => Promise<void>;
+  updateNote: (id: string, updates: { title?: string; phoneNumber?: string; upiId?: string; content?: string }) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   restoreNote: (id: string) => Promise<void>;
   permanentlyDeleteNote: (id: string) => Promise<void>;
@@ -54,8 +55,9 @@ export const useNotesStore = create<NotesState>()(
           id: 'sample-chat-2',
           title: 'Store Ledger Account',
           phoneNumber: '+91 9876543210',
-          content: '500\n-200 paid\ncleared\n120 new items',
-          total: 120,
+          upiId: '9876543210@paytm',
+          content: '500\n-200 paid\ncleared\n-120 items taken',
+          total: -120,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           isDeleted: false,
@@ -64,12 +66,13 @@ export const useNotesStore = create<NotesState>()(
       lastSyncedAt: null,
       isSyncing: false,
 
-      addNote: async ({ title, phoneNumber, content }) => {
+      addNote: async ({ title, phoneNumber, upiId, content }) => {
         const total = calculateTotal(content);
         const newNote: Note = {
           id: `chat-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           title,
           phoneNumber,
+          upiId,
           content,
           total,
           createdAt: Date.now(),
@@ -177,8 +180,11 @@ export const useNotesStore = create<NotesState>()(
 
         set({ isSyncing: true });
         try {
-          const currentNotes = get().notes;
-          await syncAllNotesToFirestore(user.uid, currentNotes);
+          // Only upload user-created non-sample notes
+          const currentNotes = get().notes.filter(n => !n.id.startsWith('sample-chat-'));
+          if (currentNotes.length > 0) {
+            await syncAllNotesToFirestore(user.uid, currentNotes);
+          }
           set({ lastSyncedAt: Date.now(), isSyncing: false });
         } catch (e) {
           console.error('Failed to upload all notes to cloud:', e);
@@ -189,19 +195,40 @@ export const useNotesStore = create<NotesState>()(
       syncCloud: (userUid: string) => {
         set({ isSyncing: true });
 
-        // Upload local notes to Firestore so no offline work is lost
-        get().uploadAllToCloud();
+        // Initial one-time fetch to restore user data on login/reinstall
+        fetchUserNotesFromFirestore(userUid).then((initialCloudNotes) => {
+          if (initialCloudNotes && initialCloudNotes.length > 0) {
+            const formatted = initialCloudNotes.map((item) => ({
+              ...item,
+              total: calculateTotal(item.content || ''),
+            }));
+            set({
+              notes: formatted.sort((a, b) => b.updatedAt - a.updatedAt),
+              lastSyncedAt: Date.now(),
+              isSyncing: false,
+            });
+          } else {
+            // Upload any local non-sample notes if user was offline
+            get().uploadAllToCloud();
+          }
+        }).catch((err) => {
+          console.error('Error restoring initial cloud notes:', err);
+        });
 
-        // Subscribe to real-time updates from Firestore
+        // Real-time listener for ongoing updates across devices
         const unsubscribe = subscribeToUserNotes(userUid, (cloudNotes) => {
           if (cloudNotes && cloudNotes.length > 0) {
             set((state) => {
               const mergedMap = new Map<string, Note>();
-              state.notes.forEach((item) => mergedMap.set(item.id, item));
+              
+              // Keep non-sample local notes
+              state.notes
+                .filter(n => !n.id.startsWith('sample-chat-'))
+                .forEach((item) => mergedMap.set(item.id, item));
 
               cloudNotes.forEach((cloudItem) => {
                 const existing = mergedMap.get(cloudItem.id);
-                if (!existing || cloudItem.updatedAt > existing.updatedAt) {
+                if (!existing || cloudItem.updatedAt >= existing.updatedAt) {
                   mergedMap.set(cloudItem.id, {
                     ...cloudItem,
                     total: calculateTotal(cloudItem.content || ''),
