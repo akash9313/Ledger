@@ -5,10 +5,12 @@ import NoteDetailScreen from '../../features/notes/screens/NoteDetailScreen';
 import SettingsScreen from '../../features/settings/screens/SettingsScreen';
 import RecentlyDeletedScreen from '../../features/notes/screens/RecentlyDeletedScreen';
 import SplashScreen from '../../features/splash/screens/SplashScreen';
+import AuthScreen from '../../features/auth/screens/AuthScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
   Home: undefined;
+  Auth: undefined;
   NoteDetail: { noteId?: string };
   Settings: undefined;
   RecentlyDeleted: undefined;
@@ -34,6 +36,11 @@ const RootNavigator = () => {
         name="Home" 
         component={HomeScreen} 
         options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name="Auth" 
+        component={AuthScreen} 
+        options={{ headerShown: false, animation: 'slide_from_bottom' }} 
       />
       <Stack.Screen 
         name="NoteDetail" 

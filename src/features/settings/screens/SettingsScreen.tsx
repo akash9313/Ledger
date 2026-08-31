@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../core/navigation/RootNavigator';
 import { useSettingsStore, ListDisplay, ListOrder } from '../store/useSettingsStore';
 import { useNotesStore } from '../../notes/store/useNotesStore';
+import { useAuthStore } from '../../auth/store/useAuthStore';
 import { useTheme } from '../../../theme/useTheme';
 import { ThemeMode } from '../../../theme/colors';
 
@@ -13,6 +14,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 const SettingsScreen = ({ navigation }: Props) => {
   const { listDisplay, listOrder, theme, setListDisplay, setListOrder, setTheme } = useSettingsStore();
   const { lastSyncedAt } = useNotesStore();
+  const { user } = useAuthStore();
   const { colors } = useTheme();
   
   const [displayModalVisible, setDisplayModalVisible] = useState(false);
@@ -47,6 +49,18 @@ const SettingsScreen = ({ navigation }: Props) => {
       </View>
 
       <View style={styles.content}>
+        {/* Google Account & Firestore Cloud Sync Item */}
+        <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Auth')}>
+          <Text style={[styles.settingTitle, { color: colors.textSecondary }]}>
+            Google Account & Cloud Sync ☁️
+          </Text>
+          <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>
+            {user 
+              ? `Connected: ${user.email} (Firestore Online)` 
+              : 'Guest Mode - Tap to Sign In with Google'}
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.settingItem} onPress={() => setThemeModalVisible(true)}>
           <Text style={[styles.settingTitle, { color: colors.textSecondary }]}>Theme</Text>
           <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>{themeLabels[theme]}</Text>
@@ -66,17 +80,9 @@ const SettingsScreen = ({ navigation }: Props) => {
           <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>{orderLabels[listOrder]}</Text>
         </TouchableOpacity>
 
-        {/* Non-clickable Cloud Sync Status (100% Private, No Keys Exposed) */}
-        <View style={styles.settingItem}>
-          <Text style={[styles.settingTitle, { color: colors.textSecondary }]}>Cloud Sync ☁️</Text>
-          <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>
-            {lastSyncedAt ? `Automatic (Last synced: ${new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : 'Automatic & Private'}
-          </Text>
-        </View>
-
         <View style={styles.settingItem}>
           <Text style={[styles.settingTitle, { color: colors.textSecondary }]}>Version</Text>
-          <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>V3.1.5.55</Text>
+          <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>V3.2.0 (Firestore Connected)</Text>
         </View>
       </View>
 

@@ -9,10 +9,26 @@
       "client_info": {
         "mobilesdk_app_id": "1:805649213978:android:90c0271cc127e025f27fa3",
         "android_client_info": {
-          "package_name": "com.ledger"
+          "package_name": "com.trustosapp"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "805649213978-3uksrobg59hcmnvjpt5iueh0kjo9hqia.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.trustosapp",
+            "certificate_hash": "556a374c3315a9af4d71f6d92b1f801b6479d2b9"
+          }
+        },
+        {
+          "client_id": "805649213978-3v690msqrpafnt4fo6g142kn3sj1b78u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.trustosapp",
+            "certificate_hash": "7f9591b802374cd77ac6836973bd100a23d24735"
+          }
+        },
         {
           "client_id": "805649213978-2r1r1q4e940brjqh2iien22tq0gebtmv.apps.googleusercontent.com",
           "client_type": 3
@@ -38,10 +54,26 @@
       "client_info": {
         "mobilesdk_app_id": "1:805649213978:android:90c0271cc127e025f27fa3",
         "android_client_info": {
-          "package_name": "com.trustosapp"
+          "package_name": "com.ledger"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "805649213978-3uksrobg59hcmnvjpt5iueh0kjo9hqia.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ledger",
+            "certificate_hash": "556a374c3315a9af4d71f6d92b1f801b6479d2b9"
+          }
+        },
+        {
+          "client_id": "805649213978-3v690msqrpafnt4fo6g142kn3sj1b78u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ledger",
+            "certificate_hash": "7f9591b802374cd77ac6836973bd100a23d24735"
+          }
+        },
         {
           "client_id": "805649213978-2r1r1q4e940brjqh2iien22tq0gebtmv.apps.googleusercontent.com",
           "client_type": 3

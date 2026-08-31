@@ -1,7 +1,11 @@
 export interface Note {
   id: string;
   title: string;
+  phoneNumber?: string;
   content: string;
+  total?: number;
+  createdAt: number;
   updatedAt: number;
-  createdAt?: number;
+  isDeleted?: boolean;
+  deletedAt?: number | null;
 }

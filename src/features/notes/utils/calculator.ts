@@ -1,3 +1,11 @@
+/**
+ * Line-by-line Ledger Calculator
+ * 
+ * Supports:
+ * - Positive numbers (e.g. "50", "100 paid") -> +50
+ * - Negative numbers (e.g. "-20", "-30 snack") -> -20
+ * - "cleared" or "Cleared" -> resets running balance to 0
+ */
 export const calculateTotal = (text: string): number => {
   if (!text) return 0;
   
@@ -14,23 +22,20 @@ export const calculateTotal = (text: string): number => {
       continue;
     }
 
-    // 1. Try parsing the entire line
+    // 1. Try parsing the entire line as a number
     const num = Number(trimmed);
     if (!isNaN(num)) {
       sum += num;
       continue;
     }
 
-    // 2. Try parsing the first word of the line (e.g., "1500. cleared" -> "1500.")
+    // 2. Try parsing the first word of the line (e.g., "150. cash", "-20 coffee")
     const firstWord = trimmed.split(' ')[0];
     const firstNum = parseFloat(firstWord);
     
-    // parseFloat will return a valid number if it starts with one, e.g. "50rupees" -> 50
-    // If it's something like "Total 215", firstWord is "Total", parseFloat is NaN.
     if (!isNaN(firstNum)) {
       sum += firstNum;
     } else if (firstWord.toLowerCase() === 'cleared') {
-      // Also reset if the line starts with "Cleared", e.g., "Cleared today"
       sum = 0;
     }
   }

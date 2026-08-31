@@ -2,140 +2,234 @@ import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { createMMKV } from 'react-native-mmkv';
 import { Note } from '../models/Note';
-import { syncNotesToCloud, deleteNoteFromCloud } from '../../../services/cloudSyncService';
-import { updateWidgetWithLatestNotes } from '../../../services/widgetService';
-import { useSettingsStore } from '../../settings/store/useSettingsStore';
+import { calculateTotal } from '../utils/calculator';
+import { 
+  saveNoteToFirestore, 
+  deleteNoteFromFirestore, 
+  syncAllNotesToFirestore,
+  subscribeToUserNotes
+} from '../../../services/firestoreService';
+import { useAuthStore } from '../../auth/store/useAuthStore';
 
 const storage = createMMKV();
 
-const zustandStorage: StateStorage = {
-  setItem: (name, value) => {
-    return storage.set(name, value);
-  },
-  getItem: (name) => {
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  removeItem: (name) => {
-    return storage.remove(name);
-  },
+const zustandNotesStorage: StateStorage = {
+  setItem: (name, value) => storage.set(name, value),
+  getItem: (name) => storage.getString(name) ?? null,
+  removeItem: (name) => storage.remove(name),
 };
-
-const getThemeMode = () => useSettingsStore.getState().theme || 'dark';
 
 interface NotesState {
   notes: Note[];
-  deletedNotes: Note[];
-  isSyncing: boolean;
   lastSyncedAt: number | null;
-  syncError: string | null;
+  isSyncing: boolean;
+
+  addNote: (note: { title: string; phoneNumber?: string; content: string }) => Promise<void>;
+  updateNote: (id: string, updates: { title?: string; phoneNumber?: string; content?: string }) => Promise<void>;
+  deleteNote: (id: string) => Promise<void>;
+  restoreNote: (id: string) => Promise<void>;
+  permanentlyDeleteNote: (id: string) => Promise<void>;
+  bulkDeleteNotes: (ids: string[]) => Promise<void>;
   
-  addNote: (note: Omit<Note, 'id' | 'updatedAt' | 'createdAt'>) => void;
-  updateNote: (id: string, updates: Partial<Note>) => void;
-  deleteNote: (id: string) => void;
-  restoreNote: (id: string) => void;
-  permanentlyDeleteNote: (id: string) => void;
-  syncWithCloud: () => Promise<{ success: boolean; error?: string }>;
+  // Real-time Firestore synchronization
+  syncCloud: (userUid: string) => () => void;
+  uploadAllToCloud: () => Promise<void>;
 }
 
 export const useNotesStore = create<NotesState>()(
   persist(
     (set, get) => ({
-      notes: [],
-      deletedNotes: [],
-      isSyncing: false,
-      lastSyncedAt: null,
-      syncError: null,
-
-      addNote: (note) => {
-        set((state) => ({
-          notes: [
-            {
-              ...note,
-              id: Math.random().toString(36).substring(2, 9),
-              updatedAt: Date.now(),
-              createdAt: Date.now(),
-            },
-            ...state.notes,
-          ]
-        }));
-        updateWidgetWithLatestNotes(get().notes, getThemeMode());
-        // Auto-sync new note to Cloud Firestore in background
-        setTimeout(() => get().syncWithCloud(), 300);
-      },
-      updateNote: (id, updates) => {
-        set((state) => ({
-          notes: state.notes.map((n) => n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n)
-        }));
-        updateWidgetWithLatestNotes(get().notes, getThemeMode());
-        // Auto-sync updated note to Cloud Firestore in background
-        setTimeout(() => get().syncWithCloud(), 500);
-      },
-      deleteNote: (id) => {
-        deleteNoteFromCloud(id);
-        set((state) => {
-          const noteToDelete = state.notes.find((n) => n.id === id);
-          if (!noteToDelete) return state;
-          return {
-            notes: state.notes.filter((n) => n.id !== id),
-            deletedNotes: [noteToDelete, ...state.deletedNotes]
-          };
-        });
-        updateWidgetWithLatestNotes(get().notes, getThemeMode());
-        // Auto-sync after deleting note
-        setTimeout(() => get().syncWithCloud(), 300);
-      },
-      restoreNote: (id) => {
-        set((state) => {
-          const noteToRestore = state.deletedNotes.find((n) => n.id === id);
-          if (!noteToRestore) return state;
-          return {
-            deletedNotes: state.deletedNotes.filter((n) => n.id !== id),
-            notes: [{ ...noteToRestore, updatedAt: Date.now() }, ...state.notes]
-          };
-        });
-        updateWidgetWithLatestNotes(get().notes, getThemeMode());
-        setTimeout(() => get().syncWithCloud(), 300);
-      },
-      permanentlyDeleteNote: (id) => {
-        deleteNoteFromCloud(id);
-        set((state) => ({
-          deletedNotes: state.deletedNotes.filter((n) => n.id !== id)
-        }));
-      },
-      syncWithCloud: async () => {
-        set({ isSyncing: true, syncError: null });
-        const currentLocalNotes = get().notes;
-        const currentDeletedNotes = get().deletedNotes;
-        const result = await syncNotesToCloud(currentLocalNotes, currentDeletedNotes);
-
-        if (result.success && result.notes) {
-          set({
-            notes: result.notes,
-            isSyncing: false,
-            lastSyncedAt: Date.now(),
-            syncError: null,
-          });
-          updateWidgetWithLatestNotes(result.notes, getThemeMode());
-          return { success: true };
-        } else {
-          set({
-            isSyncing: false,
-            syncError: result.error || 'Sync failed',
-          });
-          updateWidgetWithLatestNotes(currentLocalNotes, getThemeMode());
-          return { success: false, error: result.error };
+      notes: [
+        {
+          id: 'sample-chat-1',
+          title: 'John Smith',
+          phoneNumber: '+1 555-0199',
+          content: '150 Advance payment\n-50 Grocery item\n-20 Coffee',
+          total: 80,
+          createdAt: Date.now() - 86400000,
+          updatedAt: Date.now() - 86400000,
+          isDeleted: false,
+        },
+        {
+          id: 'sample-chat-2',
+          title: 'Store Ledger Account',
+          phoneNumber: '+91 9876543210',
+          content: '500\n-200 paid\ncleared\n120 new items',
+          total: 120,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isDeleted: false,
         }
+      ],
+      lastSyncedAt: null,
+      isSyncing: false,
+
+      addNote: async ({ title, phoneNumber, content }) => {
+        const total = calculateTotal(content);
+        const newNote: Note = {
+          id: `chat-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          title,
+          phoneNumber,
+          content,
+          total,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isDeleted: false,
+        };
+
+        set((state) => ({ notes: [newNote, ...state.notes] }));
+
+        const user = useAuthStore.getState().user;
+        if (user?.uid) {
+          await saveNoteToFirestore(user.uid, newNote);
+          set({ lastSyncedAt: Date.now() });
+        }
+      },
+
+      updateNote: async (id, updates) => {
+        set((state) => ({
+          notes: state.notes.map((item) => {
+            if (item.id === id) {
+              const updatedContent = updates.content !== undefined ? updates.content : item.content;
+              return {
+                ...item,
+                ...updates,
+                total: calculateTotal(updatedContent),
+                updatedAt: Date.now(),
+              };
+            }
+            return item;
+          }),
+        }));
+
+        const user = useAuthStore.getState().user;
+        if (user?.uid) {
+          const updated = get().notes.find((n) => n.id === id);
+          if (updated) {
+            await saveNoteToFirestore(user.uid, updated);
+            set({ lastSyncedAt: Date.now() });
+          }
+        }
+      },
+
+      deleteNote: async (id) => {
+        set((state) => ({
+          notes: state.notes.map((item) =>
+            item.id === id ? { ...item, isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() } : item
+          ),
+        }));
+
+        const user = useAuthStore.getState().user;
+        if (user?.uid) {
+          await deleteNoteFromFirestore(user.uid, id, false);
+          set({ lastSyncedAt: Date.now() });
+        }
+      },
+
+      bulkDeleteNotes: async (ids) => {
+        set((state) => ({
+          notes: state.notes.map((item) =>
+            ids.includes(item.id) ? { ...item, isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() } : item
+          ),
+        }));
+
+        const user = useAuthStore.getState().user;
+        if (user?.uid) {
+          for (const id of ids) {
+            await deleteNoteFromFirestore(user.uid, id, false);
+          }
+          set({ lastSyncedAt: Date.now() });
+        }
+      },
+
+      restoreNote: async (id) => {
+        set((state) => ({
+          notes: state.notes.map((item) =>
+            item.id === id ? { ...item, isDeleted: false, deletedAt: null, updatedAt: Date.now() } : item
+          ),
+        }));
+
+        const user = useAuthStore.getState().user;
+        if (user?.uid) {
+          const restored = get().notes.find((n) => n.id === id);
+          if (restored) {
+            await saveNoteToFirestore(user.uid, restored);
+            set({ lastSyncedAt: Date.now() });
+          }
+        }
+      },
+
+      permanentlyDeleteNote: async (id) => {
+        set((state) => ({
+          notes: state.notes.filter((item) => item.id !== id),
+        }));
+
+        const user = useAuthStore.getState().user;
+        if (user?.uid) {
+          await deleteNoteFromFirestore(user.uid, id, true);
+          set({ lastSyncedAt: Date.now() });
+        }
+      },
+
+      uploadAllToCloud: async () => {
+        const user = useAuthStore.getState().user;
+        if (!user?.uid) return;
+
+        set({ isSyncing: true });
+        try {
+          const currentNotes = get().notes;
+          await syncAllNotesToFirestore(user.uid, currentNotes);
+          set({ lastSyncedAt: Date.now(), isSyncing: false });
+        } catch (e) {
+          console.error('Failed to upload all notes to cloud:', e);
+          set({ isSyncing: false });
+        }
+      },
+
+      syncCloud: (userUid: string) => {
+        set({ isSyncing: true });
+
+        // Upload local notes to Firestore so no offline work is lost
+        get().uploadAllToCloud();
+
+        // Subscribe to real-time updates from Firestore
+        const unsubscribe = subscribeToUserNotes(userUid, (cloudNotes) => {
+          if (cloudNotes && cloudNotes.length > 0) {
+            set((state) => {
+              const mergedMap = new Map<string, Note>();
+              state.notes.forEach((item) => mergedMap.set(item.id, item));
+
+              cloudNotes.forEach((cloudItem) => {
+                const existing = mergedMap.get(cloudItem.id);
+                if (!existing || cloudItem.updatedAt > existing.updatedAt) {
+                  mergedMap.set(cloudItem.id, {
+                    ...cloudItem,
+                    total: calculateTotal(cloudItem.content || ''),
+                  });
+                }
+              });
+
+              const mergedList = Array.from(mergedMap.values()).sort(
+                (a, b) => b.updatedAt - a.updatedAt
+              );
+
+              return {
+                notes: mergedList,
+                lastSyncedAt: Date.now(),
+                isSyncing: false,
+              };
+            });
+          } else {
+            set({ isSyncing: false });
+          }
+        });
+
+        return unsubscribe;
       },
     }),
     {
-      name: 'notes-storage',
-      storage: createJSONStorage(() => zustandStorage),
-      onRehydrateStorage: () => (state) => {
-        if (state && state.notes) {
-          updateWidgetWithLatestNotes(state.notes, getThemeMode());
-        }
-      },
+      name: 'ledger-notes-storage',
+      storage: createJSONStorage(() => zustandNotesStorage),
     }
   )
 );
