@@ -103,6 +103,41 @@ export const signOutUser = async (): Promise<void> => {
   }
 };
 
+export const checkAndRestoreSession = async (): Promise<UserProfile | null> => {
+  configureGoogleSignin();
+  try {
+    const auth = getFirebaseAuth();
+    if (auth?.currentUser) {
+      const u = auth.currentUser;
+      return {
+        uid: u.uid,
+        displayName: u.displayName,
+        email: u.email,
+        photoURL: u.photoURL,
+        isAnonymous: u.isAnonymous,
+      };
+    }
+
+    const response = await GoogleSignin.signInSilently();
+    const idToken = response.data?.idToken || (response as any).idToken;
+    if (idToken && auth) {
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, credential);
+      const u = userCredential.user;
+      return {
+        uid: u.uid,
+        displayName: u.displayName,
+        email: u.email,
+        photoURL: u.photoURL,
+        isAnonymous: u.isAnonymous,
+      };
+    }
+  } catch (e) {
+    // Not signed in silently
+  }
+  return null;
+};
+
 export const subscribeToAuthState = (callback: (user: UserProfile | null) => void) => {
   const auth = getFirebaseAuth();
   if (!auth) {

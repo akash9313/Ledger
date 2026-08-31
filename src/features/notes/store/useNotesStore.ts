@@ -11,6 +11,7 @@ import {
   fetchUserNotesFromFirestore
 } from '../../../services/firestoreService';
 import { useAuthStore } from '../../auth/store/useAuthStore';
+import { updateWidgetWithLatestNotes } from '../../../services/widgetService';
 
 const storage = createMMKV();
 
@@ -40,29 +41,7 @@ interface NotesState {
 export const useNotesStore = create<NotesState>()(
   persist(
     (set, get) => ({
-      notes: [
-        {
-          id: 'sample-chat-1',
-          title: 'John Smith',
-          phoneNumber: '+1 555-0199',
-          content: '150 Advance payment\n-50 Grocery item\n-20 Coffee',
-          total: 80,
-          createdAt: Date.now() - 86400000,
-          updatedAt: Date.now() - 86400000,
-          isDeleted: false,
-        },
-        {
-          id: 'sample-chat-2',
-          title: 'Store Ledger Account',
-          phoneNumber: '+91 9876543210',
-          upiId: '9876543210@paytm',
-          content: '500\n-200 paid\ncleared\n-120 items taken',
-          total: -120,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          isDeleted: false,
-        }
-      ],
+      notes: [],
       lastSyncedAt: null,
       isSyncing: false,
 
@@ -81,6 +60,7 @@ export const useNotesStore = create<NotesState>()(
         };
 
         set((state) => ({ notes: [newNote, ...state.notes] }));
+        updateWidgetWithLatestNotes(get().notes);
 
         const user = useAuthStore.getState().user;
         if (user?.uid) {
@@ -104,6 +84,7 @@ export const useNotesStore = create<NotesState>()(
             return item;
           }),
         }));
+        updateWidgetWithLatestNotes(get().notes);
 
         const user = useAuthStore.getState().user;
         if (user?.uid) {
@@ -121,6 +102,7 @@ export const useNotesStore = create<NotesState>()(
             item.id === id ? { ...item, isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() } : item
           ),
         }));
+        updateWidgetWithLatestNotes(get().notes);
 
         const user = useAuthStore.getState().user;
         if (user?.uid) {
@@ -135,6 +117,7 @@ export const useNotesStore = create<NotesState>()(
             ids.includes(item.id) ? { ...item, isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() } : item
           ),
         }));
+        updateWidgetWithLatestNotes(get().notes);
 
         const user = useAuthStore.getState().user;
         if (user?.uid) {
@@ -151,6 +134,7 @@ export const useNotesStore = create<NotesState>()(
             item.id === id ? { ...item, isDeleted: false, deletedAt: null, updatedAt: Date.now() } : item
           ),
         }));
+        updateWidgetWithLatestNotes(get().notes);
 
         const user = useAuthStore.getState().user;
         if (user?.uid) {
@@ -166,6 +150,7 @@ export const useNotesStore = create<NotesState>()(
         set((state) => ({
           notes: state.notes.filter((item) => item.id !== id),
         }));
+        updateWidgetWithLatestNotes(get().notes);
 
         const user = useAuthStore.getState().user;
         if (user?.uid) {
@@ -180,12 +165,12 @@ export const useNotesStore = create<NotesState>()(
 
         set({ isSyncing: true });
         try {
-          // Only upload user-created non-sample notes
-          const currentNotes = get().notes.filter(n => !n.id.startsWith('sample-chat-'));
+          const currentNotes = get().notes;
           if (currentNotes.length > 0) {
             await syncAllNotesToFirestore(user.uid, currentNotes);
           }
           set({ lastSyncedAt: Date.now(), isSyncing: false });
+          updateWidgetWithLatestNotes(get().notes);
         } catch (e) {
           console.error('Failed to upload all notes to cloud:', e);
           set({ isSyncing: false });
@@ -202,13 +187,14 @@ export const useNotesStore = create<NotesState>()(
               ...item,
               total: calculateTotal(item.content || ''),
             }));
+            const sorted = formatted.sort((a, b) => b.updatedAt - a.updatedAt);
             set({
-              notes: formatted.sort((a, b) => b.updatedAt - a.updatedAt),
+              notes: sorted,
               lastSyncedAt: Date.now(),
               isSyncing: false,
             });
+            updateWidgetWithLatestNotes(sorted);
           } else {
-            // Upload any local non-sample notes if user was offline
             get().uploadAllToCloud();
           }
         }).catch((err) => {
@@ -221,10 +207,7 @@ export const useNotesStore = create<NotesState>()(
             set((state) => {
               const mergedMap = new Map<string, Note>();
               
-              // Keep non-sample local notes
-              state.notes
-                .filter(n => !n.id.startsWith('sample-chat-'))
-                .forEach((item) => mergedMap.set(item.id, item));
+              state.notes.forEach((item) => mergedMap.set(item.id, item));
 
               cloudNotes.forEach((cloudItem) => {
                 const existing = mergedMap.get(cloudItem.id);
@@ -239,6 +222,8 @@ export const useNotesStore = create<NotesState>()(
               const mergedList = Array.from(mergedMap.values()).sort(
                 (a, b) => b.updatedAt - a.updatedAt
               );
+
+              updateWidgetWithLatestNotes(mergedList);
 
               return {
                 notes: mergedList,
@@ -255,7 +240,7 @@ export const useNotesStore = create<NotesState>()(
       },
     }),
     {
-      name: 'ledger-notes-storage',
+      name: 'notes-storage',
       storage: createJSONStorage(() => zustandNotesStorage),
     }
   )

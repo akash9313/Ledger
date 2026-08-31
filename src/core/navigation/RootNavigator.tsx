@@ -11,7 +11,7 @@ export type RootStackParamList = {
   Splash: undefined;
   Home: undefined;
   Auth: undefined;
-  NoteDetail: { noteId?: string };
+  NoteDetail: { noteId?: string; fromWidget?: boolean };
   Settings: undefined;
   RecentlyDeleted: undefined;
 };

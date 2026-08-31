@@ -18,20 +18,21 @@ import { useAuthStore } from '../../auth/store/useAuthStore';
 import { useTheme } from '../../../theme/useTheme';
 import { Note } from '../models/Note';
 import { calculateTotal } from '../utils/calculator';
+import { AppIcon } from '../../../core/components/AppIcon';
+import { updateWidgetWithLatestNotes } from '../../../services/widgetService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 const HomeScreen = ({ navigation }: Props) => {
   const { notes, bulkDeleteNotes, syncCloud, isSyncing } = useNotesStore();
   const { user, initAuthListener } = useAuthStore();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Initialize auth listener & cloud sync
   useEffect(() => {
@@ -46,30 +47,35 @@ const HomeScreen = ({ navigation }: Props) => {
     }
   }, [user?.uid]);
 
+  // Auto-sync notes to Android Widget on load/change
+  useEffect(() => {
+    updateWidgetWithLatestNotes(notes);
+  }, [notes]);
+
   const activeNotes = notes.filter((item) => !item.isDeleted);
   const filteredNotes = activeNotes.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    return (
-      item.title.toLowerCase().includes(query) ||
-      (item.phoneNumber && item.phoneNumber.toLowerCase().includes(query)) ||
-      item.content.toLowerCase().includes(query)
-    );
+    const titleMatch = item.title?.toLowerCase().includes(query);
+    const phoneMatch = item.phoneNumber?.toLowerCase().includes(query);
+    const contentMatch = item.content?.toLowerCase().includes(query);
+    return titleMatch || phoneMatch || contentMatch;
   });
 
   const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((item) => item !== id));
+      const updated = selectedIds.filter((item) => item !== id);
+      setSelectedIds(updated);
+      if (updated.length === 0) setIsSelectionMode(false);
     } else {
       setSelectedIds([...selectedIds, id]);
     }
   };
 
   const handleBulkDelete = () => {
-    if (!selectedIds.length) return;
     Alert.alert(
-      'Delete Selected',
-      `Move ${selectedIds.length} account(s) to Recently Deleted?`,
+      'Delete Selected Accounts',
+      `Are you sure you want to move ${selectedIds.length} ledger account(s) to Recently Deleted?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -91,7 +97,7 @@ const HomeScreen = ({ navigation }: Props) => {
     const isPositive = total > 0;
     const isNegative = total < 0;
 
-    const lines = (item.content || '').split('\n').filter(l => l.trim() !== '');
+    const lines = (item.content || '').split('\n').filter((l) => l.trim().length > 0);
     const lastLine = lines.length > 0 ? lines[lines.length - 1] : 'No transactions recorded';
 
     return (
@@ -124,9 +130,12 @@ const HomeScreen = ({ navigation }: Props) => {
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { color: colors.textPrimary }]}>{item.title || 'Untitled Chat'}</Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>{item.title || 'Untitled Account'}</Text>
               {item.phoneNumber ? (
-                <Text style={[styles.phoneSub, { color: colors.textMuted }]}>📱 {item.phoneNumber}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                  <AppIcon name="call" size={12} color={colors.textMuted} />
+                  <Text style={[styles.phoneSub, { color: colors.textMuted, marginLeft: 4 }]}>{item.phoneNumber}</Text>
+                </View>
               ) : null}
             </View>
           </View>
@@ -164,17 +173,17 @@ const HomeScreen = ({ navigation }: Props) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
 
-      {/* Dynamic Header */}
+      {/* App Header */}
       {isSearchMode ? (
-        <View style={styles.header}>
+        <View style={styles.searchHeader}>
           <TouchableOpacity onPress={() => { setIsSearchMode(false); setSearchQuery(''); }} style={styles.iconBtn}>
-            <Text style={[styles.iconText, { color: colors.icon || '#FFF' }]}>❮</Text>
+            <AppIcon name="arrow-back" size={20} color={colors.icon || colors.textPrimary} />
           </TouchableOpacity>
-          <TextInput 
-            style={[styles.searchInput, { color: colors.textPrimary, backgroundColor: colors.surface || '#161622', borderColor: colors.border }]} 
-            placeholder="Search by name, mobile, or note..." 
+          <TextInput
+            style={[styles.searchInput, { color: colors.textPrimary, backgroundColor: colors.inputBg || '#161622' }]}
+            placeholder="Search accounts by name or phone..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -184,11 +193,11 @@ const HomeScreen = ({ navigation }: Props) => {
       ) : isSelectionMode ? (
         <View style={styles.header}>
           <TouchableOpacity onPress={() => { setIsSelectionMode(false); setSelectedIds([]); }} style={styles.iconBtn}>
-            <Text style={[styles.iconText, { color: colors.icon || '#FFF' }]}>❮</Text>
+            <AppIcon name="arrow-back" size={20} color={colors.icon || colors.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{selectedIds.length} Selected</Text>
           <TouchableOpacity onPress={handleBulkDelete} style={styles.iconBtn}>
-            <Text style={[styles.iconText, { color: '#EF4444' }]}>🗑</Text>
+            <AppIcon name="trash" size={20} color="#EF4444" />
           </TouchableOpacity>
         </View>
       ) : (
@@ -201,33 +210,27 @@ const HomeScreen = ({ navigation }: Props) => {
           </View>
 
           <View style={styles.headerRight}>
-            {/* Cloud Sync & Auth Button */}
+            <TouchableOpacity style={styles.iconBtn} onPress={() => setIsSearchMode(true)}>
+              <AppIcon name="search" size={20} color={colors.icon || colors.textPrimary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings')}>
+              <AppIcon name="settings" size={20} color={colors.icon || colors.textPrimary} />
+            </TouchableOpacity>
+
+            {/* Profile Avatar Button Shifted to Far Right */}
             <TouchableOpacity 
-              style={styles.authBadge} 
+              style={styles.profileAvatarBtn} 
               onPress={() => navigation.navigate('Auth')}
               activeOpacity={0.8}
             >
               {user?.photoURL ? (
-                <Image source={{ uri: user.photoURL }} style={styles.badgeAvatar} />
+                <Image source={{ uri: user.photoURL }} style={styles.profileAvatarImg} />
               ) : (
-                <View style={styles.badgeAvatarFallback}>
-                  <Text style={styles.badgeAvatarText}>{user ? 'G' : '👤'}</Text>
+                <View style={styles.profileAvatarFallback}>
+                  <AppIcon name="user" size={18} color="#FFF" />
                 </View>
               )}
-              <View style={styles.badgeTextCol}>
-                <Text style={styles.badgeTitle}>{user ? 'Synced' : 'Guest'}</Text>
-                <Text style={[styles.badgeStatus, { color: user ? '#10B981' : '#F59E0B' }]}>
-                  {user ? (isSyncing ? 'Syncing...' : 'Cloud ☁️') : 'Login Later'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.iconBtn} onPress={() => setIsSearchMode(true)}>
-              <Text style={{ fontSize: 20 }}>🔍</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings')}>
-              <Text style={{ fontSize: 20 }}>⚙️</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -236,16 +239,16 @@ const HomeScreen = ({ navigation }: Props) => {
       {/* Guest Mode Banner Prompt */}
       {!user && (
         <TouchableOpacity 
-          style={styles.guestBanner} 
+          style={[styles.guestBanner, { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : '#EEF2FF', borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : '#C7D2FE' }]} 
           onPress={() => navigation.navigate('Auth')}
           activeOpacity={0.9}
         >
-          <Text style={styles.guestBannerIcon}>⚡</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.guestBannerTitle}>Enable Online Cloud Backup</Text>
-            <Text style={styles.guestBannerSub}>Sign in with Google to protect your ledger chats on Firestore</Text>
+          <AppIcon name="cloud" size={22} color={colors.accent || '#6366F1'} />
+          <View style={{ flex: 1, marginHorizontal: 12 }}>
+            <Text style={[styles.guestBannerTitle, { color: colors.textPrimary }]}>Enable Online Cloud Backup</Text>
+            <Text style={[styles.guestBannerSub, { color: colors.textMuted }]}>Sign in with Google to protect your ledger chats on Firestore</Text>
           </View>
-          <Text style={styles.guestBannerArrow}>❯</Text>
+          <AppIcon name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
       )}
 
@@ -256,8 +259,8 @@ const HomeScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>💬</Text>
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No accounts yet</Text>
+            <AppIcon name="journal" size={44} color={colors.textMuted} />
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary, marginTop: 12 }]}>No accounts yet</Text>
             <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
               Tap the + button below to create a new account with Name & Mobile Number!
             </Text>
@@ -277,14 +280,14 @@ const HomeScreen = ({ navigation }: Props) => {
         ]}
         onPress={() => navigation.navigate('NoteDetail', { noteId: undefined })}
       >
-        <Text style={styles.fabText}>+</Text>
+        <AppIcon name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0B12' },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -293,124 +296,74 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
   },
-  headerGreeting: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginLeft: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  authBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#161622',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    marginRight: 8,
-  },
-  badgeAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 6,
-  },
-  badgeAvatarFallback: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  badgeAvatarText: {
-    fontSize: 11,
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-  badgeTextCol: {
-    justifyContent: 'center',
-  },
-  badgeTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  badgeStatus: {
-    fontSize: 9,
-    fontWeight: '600',
-  },
+  headerGreeting: { fontSize: 13, fontWeight: '500' },
+  headerTitle: { fontSize: 26, fontWeight: '800' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#161622',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  iconText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 10,
   },
+  searchInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    fontSize: 15,
+  },
+  profileAvatarBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileAvatarImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#6366F1',
+  },
+  profileAvatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   guestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(99, 102, 241, 0.12)',
     marginHorizontal: 20,
-    marginBottom: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    marginVertical: 10,
+    padding: 14,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.3)',
   },
-  guestBannerIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  guestBannerTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  guestBannerSub: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
-  guestBannerArrow: {
-    fontSize: 16,
-    color: '#6366F1',
-    marginLeft: 8,
-  },
-  listContent: { padding: 20, paddingBottom: 160 },
+  guestBannerTitle: { fontWeight: '700', fontSize: 14 },
+  guestBannerSub: { fontSize: 12, marginTop: 2 },
+
+  listContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100 },
   card: {
-    padding: 18,
     borderRadius: 20,
+    padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -418,92 +371,46 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
   },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
     borderColor: '#9CA3AF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  phoneSub: {
-    fontSize: 13,
-    marginTop: 2,
-    fontWeight: '500',
-  },
+  title: { fontSize: 17, fontWeight: '700' },
+  phoneSub: { fontSize: 12 },
   totalBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  totalText: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  snippet: {
-    fontSize: 14,
-    marginBottom: 8,
-    fontStyle: 'italic',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  dateText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    paddingHorizontal: 32,
-    lineHeight: 22,
-  },
+  totalText: { fontSize: 13, fontWeight: '800' },
+  snippet: { fontSize: 14, marginBottom: 8 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
+  dateText: { fontSize: 12 },
+
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+  emptyTitle: { fontSize: 18, fontWeight: '700' },
+  emptySubtitle: { fontSize: 14, textAlign: 'center', marginTop: 4, paddingHorizontal: 30 },
+
   fab: {
     position: 'absolute',
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
+    elevation: 6,
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
-    shadowRadius: 10,
-  },
-  fabText: { 
-    color: '#FFFFFF', 
-    fontSize: 32, 
-    lineHeight: 34, 
-    fontWeight: '400',
+    shadowRadius: 8,
   },
 });
 

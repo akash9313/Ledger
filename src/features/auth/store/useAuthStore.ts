@@ -5,7 +5,8 @@ import {
   UserProfile, 
   signInWithGoogle as googleSignInService, 
   signOutUser as signOutService,
-  subscribeToAuthState 
+  subscribeToAuthState,
+  checkAndRestoreSession
 } from '../../../services/authService';
 import { saveUserProfileToFirestore } from '../../../services/firestoreService';
 
@@ -26,6 +27,7 @@ interface AuthState {
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
+  resetLoading: () => void;
   initAuthListener: () => () => void;
 }
 
@@ -47,6 +49,8 @@ export const useAuthStore = create<AuthState>()(
           const msg = err.message || 'Google Sign-In failed';
           console.error('useAuthStore signIn error:', msg);
           set({ error: msg, isLoading: false });
+        } finally {
+          set({ isLoading: false });
         }
       },
 
@@ -57,18 +61,31 @@ export const useAuthStore = create<AuthState>()(
           set({ user: null, isLoading: false, error: null });
         } catch (err: any) {
           set({ error: err.message || 'Logout failed', isLoading: false });
+        } finally {
+          set({ isLoading: false });
         }
       },
 
       clearError: () => set({ error: null }),
+      resetLoading: () => set({ isLoading: false, error: null }),
 
       initAuthListener: () => {
+        // Silently restore session on startup if signed in
+        checkAndRestoreSession().then((restoredUser) => {
+          if (restoredUser) {
+            set({ user: restoredUser, isInitialized: true, isLoading: false });
+          }
+        });
+
         const unsubscribe = subscribeToAuthState(async (userProfile) => {
           if (userProfile) {
-            set({ user: userProfile, isInitialized: true });
+            set({ user: userProfile, isInitialized: true, isLoading: false });
             await saveUserProfileToFirestore(userProfile);
           } else {
-            set({ user: null, isInitialized: true });
+            // Do not wipe user if MMKV holds persistent session
+            if (!get().user) {
+              set({ isInitialized: true, isLoading: false });
+            }
           }
         });
         return unsubscribe;
@@ -77,6 +94,8 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'ledger-auth-storage',
       storage: createJSONStorage(() => zustandAuthStorage),
+      // CRITICAL: Only persist user object, NEVER persist transient state like isLoading
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );

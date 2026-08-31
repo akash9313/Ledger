@@ -36,9 +36,11 @@ class LedgerWidgetProvider : AppWidgetProvider() {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit().putLong(KEY_LAST_UPDATED, System.currentTimeMillis()).apply()
 
-            // Refresh ListView data
+            // Refresh ListView data & update widget
+            for (appWidgetId in appWidgetIds) {
+                updateAppWidget(context, appWidgetManager, appWidgetId)
+            }
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_list_view)
-            onUpdate(context, appWidgetManager, appWidgetIds)
         }
     }
 
@@ -69,7 +71,7 @@ class LedgerWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_container, pendingOpenIntent)
 
             // PendingIntent to launch main app for creating a new note (+ New button)
-            val addNoteIntent = Intent(Intent.ACTION_VIEW, Uri.parse("ledger://note/new"), context, MainActivity::class.java).apply {
+            val addNoteIntent = Intent(Intent.ACTION_VIEW, Uri.parse("ledger://note/new?fromWidget=true"), context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val pendingAddIntent = PendingIntent.getActivity(
@@ -99,13 +101,14 @@ class LedgerWidgetProvider : AppWidgetProvider() {
             val lastUpdatedMs = prefs.getLong(KEY_LAST_UPDATED, System.currentTimeMillis())
             val isLight = themeMode.equals("light", ignoreCase = true)
 
-            // Background Image (28dp rounded corners)
-            views.setImageViewResource(
-                R.id.widget_bg_image,
+            // Background Drawable on Container
+            views.setInt(
+                R.id.widget_container,
+                "setBackgroundResource",
                 if (isLight) R.drawable.widget_background_light else R.drawable.widget_background_dark
             )
 
-            // Colors
+            // Header Colors
             val titleColor = if (isLight) Color.parseColor("#0F172A") else Color.parseColor("#FFFFFF")
             val subtitleColor = if (isLight) Color.parseColor("#64748B") else Color.parseColor("#A1A1AA")
 
@@ -116,8 +119,11 @@ class LedgerWidgetProvider : AppWidgetProvider() {
             views.setTextColor(R.id.widget_last_updated, subtitleColor)
             views.setTextColor(R.id.widget_empty_title, subtitleColor)
 
-            // Setup ListView RemoteViewsService & Empty View
-            val serviceIntent = Intent(context, LedgerWidgetService::class.java)
+            // Setup ListView RemoteViewsService with explicit data URI & Widget ID
+            val serviceIntent = Intent(context, LedgerWidgetService::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+            }
             views.setRemoteAdapter(R.id.widget_list_view, serviceIntent)
             views.setEmptyView(R.id.widget_list_view, R.id.widget_empty_view)
 
@@ -133,9 +139,8 @@ class LedgerWidgetProvider : AppWidgetProvider() {
             )
             views.setPendingIntentTemplate(R.id.widget_list_view, pendingIntentTemplate)
 
-            // Notify ListView data changed
+            // Update AppWidget
             appWidgetManager.notifyAppWidgetViewDataChanged(intArrayOf(appWidgetId), R.id.widget_list_view)
-
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
     }

@@ -16,13 +16,18 @@ import { RootStackParamList } from '../../../core/navigation/RootNavigator';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotesStore } from '../../notes/store/useNotesStore';
 import { useTheme } from '../../../theme/useTheme';
+import { AppIcon } from '../../../core/components/AppIcon';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Auth'>;
 
 const AuthScreen = ({ navigation }: Props) => {
-  const { user, isLoading, error, signInWithGoogle, logout, clearError } = useAuthStore();
+  const { user, isLoading, error, signInWithGoogle, logout, clearError, resetLoading } = useAuthStore();
   const { lastSyncedAt, isSyncing, uploadAllToCloud } = useNotesStore();
   const { colors } = useTheme();
+
+  useEffect(() => {
+    resetLoading();
+  }, []);
 
   useEffect(() => {
     if (error) {
@@ -60,12 +65,12 @@ const AuthScreen = ({ navigation }: Props) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0B0B12" />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.textPrimary }]}>❮</Text>
+          <AppIcon name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Account & Sync</Text>
         <View style={{ width: 40 }} />
@@ -76,17 +81,17 @@ const AuthScreen = ({ navigation }: Props) => {
         {/* Brand Banner */}
         <View style={styles.brandContainer}>
           <View style={styles.logoBadge}>
-            <Text style={styles.logoIcon}>⚡</Text>
+            <AppIcon name="cloud" size={32} color="#6366F1" />
           </View>
-          <Text style={styles.appName}>LEDGER CLOUD</Text>
-          <Text style={styles.appTagline}>
+          <Text style={[styles.appName, { color: colors.textPrimary }]}>LEDGER CLOUD</Text>
+          <Text style={[styles.appTagline, { color: colors.textMuted }]}>
             {user ? 'Online Cloud Synchronization Active' : 'Sign in to back up & sync your financial data online'}
           </Text>
         </View>
 
         {user ? (
           /* Logged In User Card */
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.statusRow}>
               <View style={styles.onlineDot} />
               <Text style={styles.statusText}>
@@ -106,21 +111,21 @@ const AuthScreen = ({ navigation }: Props) => {
               )}
 
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user.displayName || 'Google User'}</Text>
-                <Text style={styles.userEmail}>{user.email || 'No email provided'}</Text>
+                <Text style={[styles.userName, { color: colors.textPrimary }]}>{user.displayName || 'Google User'}</Text>
+                <Text style={[styles.userEmail, { color: colors.textMuted }]}>{user.email || 'No email provided'}</Text>
               </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Database Type</Text>
-              <Text style={styles.infoValue}>Firebase Firestore ☁️</Text>
+              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Database Type</Text>
+              <Text style={[styles.infoValue, { color: colors.textPrimary }]}>Firebase Firestore ☁️</Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Last Synced</Text>
-              <Text style={styles.infoValue}>
+              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Last Synced</Text>
+              <Text style={[styles.infoValue, { color: colors.textPrimary }]}>
                 {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
               </Text>
             </View>
@@ -131,47 +136,50 @@ const AuthScreen = ({ navigation }: Props) => {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#FF4D4D" />
+                <ActivityIndicator color="#EF4444" />
               ) : (
-                <Text style={styles.signOutBtnText}>Sign Out from Google</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <AppIcon name="trash" size={18} color="#EF4444" />
+                  <Text style={[styles.signOutBtnText, { marginLeft: 8 }]}>Sign Out from Google</Text>
+                </View>
               )}
             </TouchableOpacity>
           </View>
         ) : (
           /* Guest / Sign In Card */
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {/* Features showcase */}
             <View style={styles.featureItem}>
               <View style={styles.featureIconContainer}>
-                <Text style={styles.featureIcon}>☁️</Text>
+                <AppIcon name="cloud" size={22} color="#6366F1" />
               </View>
               <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>Online Firestore Storage</Text>
-                <Text style={styles.featureSubtitle}>Store your transactions safely in your personal online cloud database</Text>
+                <Text style={[styles.featureTitle, { color: colors.textPrimary }]}>Online Firestore Storage</Text>
+                <Text style={[styles.featureSubtitle, { color: colors.textMuted }]}>Store your transactions safely in your personal online cloud database</Text>
               </View>
             </View>
 
             <View style={styles.featureItem}>
               <View style={styles.featureIconContainer}>
-                <Text style={styles.featureIcon}>📲</Text>
+                <AppIcon name="journal" size={22} color="#6366F1" />
               </View>
               <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>Multi-Device Sync</Text>
-                <Text style={styles.featureSubtitle}>Access your ledger balance anywhere by logging into your Google account</Text>
+                <Text style={[styles.featureTitle, { color: colors.textPrimary }]}>Multi-Device Sync</Text>
+                <Text style={[styles.featureSubtitle, { color: colors.textMuted }]}>Access your ledger balance anywhere by logging into your Google account</Text>
               </View>
             </View>
 
             <View style={styles.featureItem}>
               <View style={styles.featureIconContainer}>
-                <Text style={styles.featureIcon}>🔒</Text>
+                <AppIcon name="check" size={22} color="#6366F1" />
               </View>
               <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>100% Private & Encrypted</Text>
-                <Text style={styles.featureSubtitle}>Protected with official Google OAuth 2.0 and Firebase Security Rules</Text>
+                <Text style={[styles.featureTitle, { color: colors.textPrimary }]}>100% Private & Encrypted</Text>
+                <Text style={[styles.featureSubtitle, { color: colors.textMuted }]}>Protected with official Google OAuth 2.0 and Firebase Security Rules</Text>
               </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             {/* Google Sign In Button */}
             <TouchableOpacity 
@@ -210,7 +218,6 @@ const AuthScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0B12',
   },
   header: {
     flexDirection: 'row',
@@ -218,16 +225,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 14,
+    borderBottomWidth: 1,
   },
   backBtn: {
-    padding: 8,
-  },
-  backText: {
-    fontSize: 22,
-    fontWeight: '600',
+    padding: 4,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
   },
   scrollContent: {
@@ -249,28 +253,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  logoIcon: {
-    fontSize: 32,
-  },
   appName: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#FFF',
     letterSpacing: 2,
   },
   appTagline: {
     fontSize: 14,
-    color: '#9CA3AF',
     textAlign: 'center',
     marginTop: 6,
     paddingHorizontal: 20,
   },
   card: {
-    backgroundColor: '#161622',
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
@@ -330,16 +327,13 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFF',
   },
   userEmail: {
     fontSize: 14,
-    color: '#9CA3AF',
     marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     marginVertical: 18,
   },
   infoRow: {
@@ -349,11 +343,9 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: '#9CA3AF',
   },
   infoValue: {
     fontSize: 14,
-    color: '#FFF',
     fontWeight: '600',
   },
   featureItem: {
@@ -365,13 +357,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
-  },
-  featureIcon: {
-    fontSize: 20,
   },
   featureTextContainer: {
     flex: 1,
@@ -379,11 +368,9 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFF',
   },
   featureSubtitle: {
     fontSize: 13,
-    color: '#9CA3AF',
     marginTop: 2,
     lineHeight: 18,
   },

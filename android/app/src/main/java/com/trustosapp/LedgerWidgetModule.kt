@@ -25,14 +25,16 @@ class LedgerWidgetModule(reactContext: ReactApplicationContext) :
             .putLong(LedgerWidgetProvider.KEY_LAST_UPDATED, System.currentTimeMillis())
             .apply()
 
-        // Trigger AppWidget update
-        val intent = Intent(context, LedgerWidgetProvider::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-        }
+        // Force update all widget instances directly
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, LedgerWidgetProvider::class.java))
-        appWidgetManager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list_view)
-        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
-        context.sendBroadcast(intent)
+        
+        for (appWidgetId in ids) {
+            LedgerWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+        }
+        
+        if (ids.isNotEmpty()) {
+            appWidgetManager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list_view)
+        }
     }
 }

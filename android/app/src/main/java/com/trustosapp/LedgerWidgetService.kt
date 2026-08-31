@@ -105,7 +105,7 @@ class LedgerRemoteViewsFactory(private val context: Context) : RemoteViewsServic
 
         // Fill-in Intent for deep linking to note details
         val fillInIntent = Intent().apply {
-            data = Uri.parse("ledger://note/$noteId")
+            data = Uri.parse("ledger://note/$noteId?fromWidget=true")
         }
         views.setOnClickFillInIntent(R.id.widget_item_row, fillInIntent)
 

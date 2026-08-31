@@ -15,6 +15,7 @@ import { useNotesStore } from '../store/useNotesStore';
 import { useTheme } from '../../../theme/useTheme';
 import { Note } from '../models/Note';
 import { calculateTotal } from '../utils/calculator';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RecentlyDeleted'>;
 
@@ -43,11 +44,11 @@ const RecentlyDeletedScreen = ({ navigation }: Props) => {
     const total = calculateTotal(item.content || '');
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardSub}>
-            {item.phoneNumber ? `📱 ${item.phoneNumber} • ` : ''}Balance: {total === 0 ? 'Cleared' : `${total > 0 ? '+₹' : '-₹'}${Math.abs(total).toLocaleString('en-IN')}`}
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+          <Text style={[styles.cardSub, { color: colors.textMuted }]}>
+            {item.phoneNumber ? `${item.phoneNumber} • ` : ''}Balance: {total === 0 ? 'Cleared' : `${total > 0 ? '+₹' : '-₹'}${Math.abs(total).toLocaleString('en-IN')}`}
           </Text>
         </View>
 
@@ -56,6 +57,7 @@ const RecentlyDeletedScreen = ({ navigation }: Props) => {
             style={styles.restoreBtn} 
             onPress={() => restoreNote(item.id)}
           >
+            <Ionicons name="refresh-outline" size={14} color="#10B981" style={{ marginRight: 4 }} />
             <Text style={styles.restoreText}>Restore</Text>
           </TouchableOpacity>
 
@@ -63,6 +65,7 @@ const RecentlyDeletedScreen = ({ navigation }: Props) => {
             style={styles.deleteBtn} 
             onPress={() => handlePermanentDelete(item.id, item.title)}
           >
+            <Ionicons name="trash-outline" size={14} color="#EF4444" style={{ marginRight: 4 }} />
             <Text style={styles.deleteText}>Delete</Text>
           </TouchableOpacity>
         </View>
@@ -72,11 +75,11 @@ const RecentlyDeletedScreen = ({ navigation }: Props) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.textPrimary }]}>❮ Back</Text>
+          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Recently Deleted</Text>
         <View style={{ width: 40 }} />
@@ -89,7 +92,7 @@ const RecentlyDeletedScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={{ fontSize: 40, marginBottom: 10 }}>🗑️</Text>
+            <Ionicons name="trash-outline" size={48} color={colors.textMuted} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Trash is empty</Text>
             <Text style={[styles.emptySub, { color: colors.textMuted }]}>
               Deleted ledger chat accounts will show up here.
@@ -102,7 +105,7 @@ const RecentlyDeletedScreen = ({ navigation }: Props) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0B12' },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -110,14 +113,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   backBtn: { paddingVertical: 4 },
-  backText: { fontSize: 15, fontWeight: '600' },
   headerTitle: { fontSize: 18, fontWeight: '700' },
   list: { padding: 20 },
   card: {
-    backgroundColor: '#161622',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -125,23 +125,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-  cardSub: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
+  cardTitle: { fontSize: 16, fontWeight: '700' },
+  cardSub: { fontSize: 13, marginTop: 2 },
   actionRow: { flexDirection: 'row', alignItems: 'center' },
   restoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
     marginRight: 8,
   },
   restoreText: { color: '#10B981', fontWeight: '700', fontSize: 12 },
   deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
   },

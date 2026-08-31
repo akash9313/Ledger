@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -12,7 +12,9 @@ import {
   Modal,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Keyboard,
+  BackHandler
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -20,11 +22,14 @@ import { RootStackParamList } from '../../../core/navigation/RootNavigator';
 import { useNotesStore } from '../store/useNotesStore';
 import { useTheme } from '../../../theme/useTheme';
 import { calculateTotal } from '../utils/calculator';
+import { AppIcon } from '../../../core/components/AppIcon';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NoteDetail'>;
 
 const NoteDetailScreen = ({ navigation, route }: Props) => {
-  const { noteId } = route.params || {};
+  const { noteId, fromWidget } = (route.params || {}) as { noteId?: string; fromWidget?: boolean | string };
+  const isFromWidget = fromWidget === true || fromWidget === 'true' || !navigation.canGoBack();
+
   const { notes, addNote, updateNote, deleteNote } = useNotesStore();
   const { colors, isDark } = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -37,6 +42,22 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
   const [content, setContent] = useState(existingNote?.content || '');
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
+  const [keyboardPadding, setKeyboardPadding] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardPadding(e.endCoordinates.height + 40)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardPadding(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const total = calculateTotal(content);
   const isPositive = total > 0;
@@ -65,7 +86,19 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
       });
     }
 
-    navigation.goBack();
+    if (isFromWidget) {
+      BackHandler.exitApp();
+    } else {
+      navigation.goBack();
+    }
+  };
+
+  const handleBack = () => {
+    if (isFromWidget) {
+      BackHandler.exitApp();
+    } else {
+      navigation.goBack();
+    }
   };
 
   const handleCall = () => {
@@ -163,20 +196,14 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
     );
   };
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 150);
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
 
       {/* Top Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.textPrimary }]}>❮ Back</Text>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+          <AppIcon name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -194,7 +221,7 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
       >
         <ScrollView 
           ref={scrollViewRef}
-          contentContainerStyle={styles.content} 
+          contentContainerStyle={[styles.content, { paddingBottom: 40 + keyboardPadding }]} 
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={true}
         >
@@ -205,21 +232,29 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.accountName, { color: colors.textPrimary }]}>{title || 'Customer'}</Text>
                   {phoneNumber ? (
-                    <Text style={[styles.accountPhone, { color: colors.textMuted }]}>📱 {phoneNumber}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                      <AppIcon name="call" size={13} color={colors.textMuted} />
+                      <Text style={[styles.accountPhone, { color: colors.textMuted, marginLeft: 4 }]}>{phoneNumber}</Text>
+                    </View>
                   ) : null}
                   {upiId ? (
-                    <Text style={styles.accountUpi}>💳 {upiId}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                      <AppIcon name="card" size={13} color="#6366F1" />
+                      <Text style={[styles.accountUpi, { marginLeft: 4 }]}>{upiId}</Text>
+                    </View>
                   ) : null}
                 </View>
 
                 <View style={styles.accountActions}>
                   {phoneNumber ? (
                     <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
-                      <Text style={styles.callBtnText}>📞 Call</Text>
+                      <AppIcon name="call" size={13} color="#10B981" />
+                      <Text style={styles.callBtnText}>Call</Text>
                     </TouchableOpacity>
                   ) : null}
                   <TouchableOpacity style={[styles.editBtn, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]} onPress={() => setIsEditingInfo(true)}>
-                    <Text style={[styles.editBtnText, { color: colors.textMuted }]}>✏️ Edit Info</Text>
+                    <AppIcon name="pencil" size={12} color={colors.textMuted} />
+                    <Text style={[styles.editBtnText, { color: colors.textMuted, marginLeft: 4 }]}>Edit Info</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -239,14 +274,16 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
                 {/* UPI Pay Button when Money is Negative (Pay Due) */}
                 {isNegative && (
                   <TouchableOpacity style={styles.upiPayBtn} onPress={handlePayUPI} activeOpacity={0.85}>
-                    <Text style={styles.upiPayBtnText}>Pay ₹{Math.abs(total).toLocaleString('en-IN')} via UPI 💸</Text>
+                    <AppIcon name="card" size={18} color="#FFF" />
+                    <Text style={styles.upiPayBtnText}>Pay ₹{Math.abs(total).toLocaleString('en-IN')} via UPI</Text>
                   </TouchableOpacity>
                 )}
 
                 {/* Request Reminder Button when Money is Positive (Receive Due) */}
                 {isPositive && (
                   <TouchableOpacity style={styles.upiRemindBtn} onPress={handleRequestReminder} activeOpacity={0.85}>
-                    <Text style={styles.upiRemindBtnText}>Remind to Pay ₹{Math.abs(total).toLocaleString('en-IN')} 📲</Text>
+                    <AppIcon name="send" size={16} color="#6366F1" />
+                    <Text style={styles.upiRemindBtnText}>Remind to Pay ₹{Math.abs(total).toLocaleString('en-IN')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -268,7 +305,8 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
 
                 {isNegative && (
                   <TouchableOpacity style={styles.upiPayBtn} onPress={handlePayUPI} activeOpacity={0.85}>
-                    <Text style={styles.upiPayBtnText}>Pay ₹{Math.abs(total).toLocaleString('en-IN')} via UPI 💸</Text>
+                    <AppIcon name="card" size={18} color="#FFF" />
+                    <Text style={styles.upiPayBtnText}>Pay ₹{Math.abs(total).toLocaleString('en-IN')} via UPI</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -339,7 +377,8 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
 
           {existingNote && (
             <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-              <Text style={styles.deleteBtnText}>🗑 Delete Account</Text>
+              <AppIcon name="trash" size={16} color="#EF4444" />
+              <Text style={styles.deleteBtnText}>Delete Account</Text>
             </TouchableOpacity>
           )}
 
@@ -358,11 +397,13 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
                 </Text>
 
                 <TouchableOpacity style={styles.waOptionBtn} onPress={handleSendWhatsApp} activeOpacity={0.85}>
-                  <Text style={styles.waOptionText}>WhatsApp 💬</Text>
+                  <AppIcon name="whatsapp" size={20} color="#FFF" />
+                  <Text style={styles.waOptionText}>WhatsApp</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.smsOptionBtn, { backgroundColor: colors.accent || '#6366F1' }]} onPress={handleSendSMS} activeOpacity={0.85}>
-                  <Text style={styles.smsOptionText}>SMS Message 📩</Text>
+                  <AppIcon name="sms" size={18} color="#FFF" />
+                  <Text style={styles.smsOptionText}>SMS Message</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.cancelModalBtn} onPress={() => setReminderModalVisible(false)}>
@@ -389,7 +430,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backBtn: { paddingVertical: 4 },
-  backText: { fontSize: 15, fontWeight: '600' },
   headerTitle: { fontSize: 18, fontWeight: '700', flex: 1, textAlign: 'center', marginHorizontal: 12 },
   saveBtn: {
     backgroundColor: '#6366F1',
@@ -417,12 +457,10 @@ const styles = StyleSheet.create({
   },
   accountPhone: {
     fontSize: 13,
-    marginTop: 2,
   },
   accountUpi: {
     fontSize: 12,
     color: '#6366F1',
-    marginTop: 2,
     fontWeight: '500',
   },
   accountActions: {
@@ -431,13 +469,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   callBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
   },
-  callBtnText: { color: '#10B981', fontWeight: '700', fontSize: 12 },
+  callBtnText: { color: '#10B981', fontWeight: '700', fontSize: 12, marginLeft: 4 },
   editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
@@ -454,20 +496,26 @@ const styles = StyleSheet.create({
   balanceValue: { fontSize: 32, fontWeight: '800', marginTop: 6 },
   upiPayBtn: {
     marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#10B981',
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 20,
     width: '100%',
-    alignItems: 'center',
   },
   upiPayBtnText: {
     color: '#FFF',
     fontWeight: '800',
     fontSize: 15,
+    marginLeft: 8,
   },
   upiRemindBtn: {
     marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(99, 102, 241, 0.15)',
     borderWidth: 1,
     borderColor: '#6366F1',
@@ -475,12 +523,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     width: '100%',
-    alignItems: 'center',
   },
   upiRemindBtnText: {
     color: '#6366F1',
     fontWeight: '800',
     fontSize: 14,
+    marginLeft: 8,
   },
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 13, marginBottom: 8, fontWeight: '600' },
@@ -505,6 +553,9 @@ const styles = StyleSheet.create({
   doneEditText: { color: '#6366F1', fontWeight: '700', fontSize: 14 },
   deleteBtn: {
     marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
     paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: 'rgba(239, 68, 68, 0.12)',
@@ -545,6 +596,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   waOptionBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: '#25D366',
     borderRadius: 16,
     paddingVertical: 14,
@@ -557,6 +611,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   smsOptionBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
