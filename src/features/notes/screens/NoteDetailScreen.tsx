@@ -23,6 +23,7 @@ import { useNotesStore } from '../store/useNotesStore';
 import { useTheme } from '../../../theme/useTheme';
 import { calculateTotal } from '../utils/calculator';
 import { AppIcon } from '../../../core/components/AppIcon';
+import { pickContactFromPhonebook, getDeviceContacts, ContactItem } from '../../../services/contactService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NoteDetail'>;
 
@@ -43,6 +44,44 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [keyboardPadding, setKeyboardPadding] = useState(0);
+
+  const [contactModalVisible, setContactModalVisible] = useState(false);
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
+  const [allDeviceContacts, setAllDeviceContacts] = useState<ContactItem[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+
+  const handleOpenContactPickerModal = async () => {
+    setIsLoadingContacts(true);
+    setContactModalVisible(true);
+    setContactSearchQuery('');
+    const contacts = await getDeviceContacts();
+    setAllDeviceContacts(contacts);
+    setIsLoadingContacts(false);
+  };
+
+  const handleNativeSystemPick = async () => {
+    setContactModalVisible(false);
+    const contact = await pickContactFromPhonebook();
+    if (contact) {
+      if (contact.phoneNumber) setPhoneNumber(contact.phoneNumber);
+      if (contact.name && (!title || title.trim() === '')) setTitle(contact.name);
+    }
+  };
+
+  const filteredContactsList = React.useMemo(() => {
+    if (!contactSearchQuery.trim()) return allDeviceContacts;
+    const query = contactSearchQuery.toLowerCase();
+    return allDeviceContacts.filter(
+      (c) => c.name?.toLowerCase().includes(query) || c.phoneNumber?.toLowerCase().includes(query)
+    );
+  }, [allDeviceContacts, contactSearchQuery]);
+
+  const handleSelectContactFromModal = (contact: ContactItem) => {
+    if (contact.phoneNumber) setPhoneNumber(contact.phoneNumber);
+    if (contact.name) setTitle(contact.name);
+    setContactModalVisible(false);
+    setContactSearchQuery('');
+  };
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
@@ -325,15 +364,39 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
 
               {/* Mobile Number */}
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.textMuted }]}>Mobile Number (Optional)</Text>
-                <TextInput
-                  style={[styles.textInput, { color: colors.textPrimary, backgroundColor: colors.inputBg || colors.surface, borderColor: colors.border }]}
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  placeholder="e.g. +91 98765 43210"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="phone-pad"
-                />
+                <View style={styles.labelRow}>
+                  <Text style={[styles.label, { color: colors.textMuted, marginBottom: 0 }]}>Mobile Number (Optional)</Text>
+                  <TouchableOpacity
+                    style={[styles.importContactBadge, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}
+                    onPress={handleOpenContactPickerModal}
+                    activeOpacity={0.8}
+                  >
+                    <AppIcon name="call" size={12} color="#6366F1" />
+                    <Text style={styles.importContactBadgeText}>Import from Contacts</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.phoneInputWrapper}>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      styles.phoneTextInput,
+                      { color: colors.textPrimary, backgroundColor: colors.inputBg || colors.surface, borderColor: colors.border }
+                    ]}
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    placeholder="e.g. +91 98765 43210"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="phone-pad"
+                  />
+                  <TouchableOpacity
+                    style={styles.phoneContactIconBtn}
+                    onPress={handleOpenContactPickerModal}
+                    activeOpacity={0.7}
+                  >
+                    <AppIcon name="user" size={18} color={colors.accent || '#6366F1'} />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* UPI ID / VPA */}
@@ -413,6 +476,108 @@ const NoteDetailScreen = ({ navigation, route }: Props) => {
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Full Phonebook Contact Picker & Search Modal */}
+      <Modal visible={contactModalVisible} animationType="slide" transparent>
+        <SafeAreaView style={[styles.contactModalContainer, { backgroundColor: colors.background }]}>
+          <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
+          
+          {/* Modal Header */}
+          <View style={[styles.contactModalHeader, { borderBottomColor: colors.border }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.contactModalTitle, { color: colors.textPrimary }]}>Select Contact</Text>
+              <Text style={[styles.contactModalSub, { color: colors.textMuted }]}>
+                Search contact name to import mobile number
+              </Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.closeContactModalBtn} 
+              onPress={() => setContactModalVisible(false)}
+            >
+              <AppIcon name="close" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Search Input Bar */}
+          <View style={styles.contactSearchWrapper}>
+            <View style={[styles.contactSearchBox, { backgroundColor: colors.card || colors.surface, borderColor: colors.border }]}>
+              <AppIcon name="search" size={18} color={colors.textMuted} />
+              <TextInput
+                style={[styles.contactSearchInput, { color: colors.textPrimary }]}
+                placeholder="Search contact by name or phone..."
+                placeholderTextColor={colors.textMuted}
+                value={contactSearchQuery}
+                onChangeText={setContactSearchQuery}
+                autoFocus
+              />
+              {contactSearchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setContactSearchQuery('')}>
+                  <AppIcon name="close" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* System Contact Picker Shortcut */}
+          <TouchableOpacity 
+            style={[styles.systemPickerBtn, { backgroundColor: 'rgba(99, 102, 241, 0.12)', borderColor: 'rgba(99, 102, 241, 0.25)' }]} 
+            onPress={handleNativeSystemPick}
+          >
+            <AppIcon name="person" size={16} color="#6366F1" />
+            <Text style={styles.systemPickerBtnText}>Open System Phonebook</Text>
+          </TouchableOpacity>
+
+          {/* Contacts List */}
+          {isLoadingContacts ? (
+            <View style={styles.emptyContactsContainer}>
+              <Text style={[styles.emptyContactsText, { color: colors.textMuted }]}>
+                Accessing phone contacts...
+              </Text>
+            </View>
+          ) : filteredContactsList.length === 0 ? (
+            <View style={styles.emptyContactsContainer}>
+              <AppIcon name="person" size={40} color={colors.textMuted} />
+              <Text style={[styles.emptyContactsTitle, { color: colors.textPrimary, marginTop: 12 }]}>
+                No contacts found
+              </Text>
+              <Text style={[styles.emptyContactsText, { color: colors.textMuted, marginTop: 4 }]}>
+                {contactSearchQuery ? `No contact matching "${contactSearchQuery}"` : 'No phone contacts available or permission denied.'}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView 
+              contentContainerStyle={styles.contactsListContent} 
+              keyboardShouldPersistTaps="handled"
+            >
+              {filteredContactsList.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.contactRowItem, { borderBottomColor: colors.border }]}
+                  onPress={() => handleSelectContactFromModal(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.contactAvatarCircle, { backgroundColor: '#6366F1' }]}>
+                    <Text style={styles.contactAvatarText}>
+                      {(item.name[0] || 'C').toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 14 }}>
+                    <Text style={[styles.contactItemName, { color: colors.textPrimary }]}>
+                      {item.name || 'Unnamed Contact'}
+                    </Text>
+                    <Text style={[styles.contactItemPhone, { color: colors.textMuted }]}>
+                      {item.phoneNumber}
+                    </Text>
+                  </View>
+                  <AppIcon name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+        </SafeAreaView>
       </Modal>
 
     </SafeAreaView>
@@ -543,6 +708,95 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  importContactBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  importContactBadgeText: {
+    fontSize: 12,
+    color: '#6366F1',
+    fontWeight: '700',
+  },
+  phoneInputWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  phoneTextInput: {
+    paddingRight: 48,
+  },
+  phoneContactIconBtn: {
+    position: 'absolute',
+    right: 14,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  suggestionBox: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 8,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  suggestionHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    letterSpacing: 0.5,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+  },
+  avatarCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#FFF',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  suggestionName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  suggestionPhone: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  sourceBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  sourceText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   doneEditBtn: {
     marginBottom: 20,
     alignItems: 'center',
@@ -631,6 +885,108 @@ const styles = StyleSheet.create({
   cancelModalText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+
+  // Contact Picker Modal Styles
+  contactModalContainer: {
+    flex: 1,
+  },
+  contactModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  contactModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  contactModalSub: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  closeContactModalBtn: {
+    padding: 6,
+  },
+  contactSearchWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 10,
+  },
+  contactSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    height: 48,
+    borderWidth: 1,
+  },
+  contactSearchInput: {
+    flex: 1,
+    fontSize: 15,
+    marginLeft: 10,
+  },
+  systemPickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  systemPickerBtnText: {
+    color: '#6366F1',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  emptyContactsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyContactsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  emptyContactsText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  contactsListContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  contactRowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  contactAvatarCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contactAvatarText: {
+    color: '#FFF',
+    fontWeight: '800',
+    fontSize: 16,
+  },
+  contactItemName: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  contactItemPhone: {
+    fontSize: 13,
+    marginTop: 2,
   },
 });
 

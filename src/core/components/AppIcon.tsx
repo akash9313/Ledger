@@ -20,6 +20,7 @@ export type IconName =
   | 'check'
   | 'info'
   | 'chevron-forward'
+  | 'close'
   | 'journal';
 
 interface AppIconProps {
@@ -152,6 +153,13 @@ export const AppIcon: React.FC<AppIconProps> = ({ name, size = 22, color = '#FFF
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <Path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
           <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+        </Svg>
+      );
+
+    case 'close':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M18 6L6 18M6 6l12 12" />
         </Svg>
       );
 
